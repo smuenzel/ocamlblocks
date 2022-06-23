@@ -82,7 +82,7 @@ let result_printer result =
       (Array.map regs ~f:Physical_register.to_string)
       (if spill then [| "SPILL" |] else [||])
   in
-  Z3_wrap.Solver_result.Generic.map result
+  Z3i.Solver_result.map result
     ~f:(Array.map 
           ~f:(fun (instruction, register_state) ->
               Instruction_with_arguments.to_string Physical_register.to_string
@@ -91,7 +91,7 @@ let result_printer result =
                 register_state
             )
        )
-  |> [%sexp_of: (string * (string array String.Map.t Register_state.t)) array Z3_wrap.Solver_result.Generic.t]
+  |> [%sexp_of: (string * (string array String.Map.t Register_state.t)) array Z3i.Solver_result.t]
   |> print_s
 
 let result_print_graph
@@ -100,7 +100,7 @@ let result_print_graph
          Z3i.Solver_result.t
     )
   =
-  Z3_wrap.Solver_result.Generic.map result
+  Z3i.Solver_result.map result
     ~f:(fun { variable_states
             ; input_states
             ; output_states
@@ -170,7 +170,7 @@ let result_print_graph
            }
          ]
       )
-  |> [%sexp_of: Sexp.t Z3_wrap.Solver_result.Generic.t]
+  |> [%sexp_of: Sexp.t Z3i.Solver_result.t]
   |> print_s
 
 let run_test_graph_internal z3 ~input ~output g =
@@ -190,13 +190,17 @@ let run_test_graph_internal z3 ~input ~output g =
   |> print_s
 
 let run_test_graph ~input ~output g =
-  let z3 = new Z3_wrap.z3 () in
+  let symbol_builder =
+    Z3i.Symbol_builder.create (Z3i.Context.create ())
+  in
   let input = String.Map.of_alist_exn input in
   let output = String.Map.of_alist_exn output in
-  run_test_graph_internal z3 ~input ~output g
+  run_test_graph_internal symbol_builder ~input ~output g
 
 let run_tests ?no_basic_block ~input ~output t =
-  let z3 = new Z3_wrap.z3 () in
+  let symbol_builder =
+    Z3i.Symbol_builder.create (Z3i.Context.create ())
+  in
   let input = String.Map.of_alist_exn input in
   let output = String.Map.of_alist_exn output in
   begin match no_basic_block with
@@ -205,13 +209,13 @@ let run_tests ?no_basic_block ~input ~output t =
       Regalloc.allocate_basic_block_internal
         ~input ~output
         t
-        z3
+        symbol_builder
       |> result_printer;
       print_endline "";
     | Some () -> ()
   end;
   let g = create_dummy_graph t in
-  run_test_graph_internal z3 ~input ~output g
+  run_test_graph_internal symbol_builder ~input ~output g
 
 let%expect_test "test_0" =
   run_tests
@@ -242,36 +246,36 @@ let%expect_test "test_0" =
   [%expect {|
     Basic Block:
     (Satisfiable
-     (("R1 = Move R0"
-       ((before ((myin0 (R0)))) (after ((myin0 (R0)) (tmp0 (R1))))))
-      ("R2 = Add R0, R1"
-       ((before ((myin0 (R0)) (tmp0 (R1)))) (after ((myin0 (R0)) (tmp1 (R2))))))
-      ("R1 = Add R0, R2"
-       ((before ((myin0 (R0)) (tmp1 (R2)))) (after ((tmp1 (R2)) (tmp2 (R1))))))
-      ("R2 = Addo R2, R1"
-       ((before ((tmp1 (R2)) (tmp2 (R1)))) (after ((tmp3 (R2))))))
-      ("R2 = Move R2" ((before ((tmp3 (R2)))) (after ((myout0 (R2))))))))
+     (("R3 = Move R2"
+       ((before ((myin0 (R2)))) (after ((myin0 (R2)) (tmp0 (R3))))))
+      ("R3 = Add R2, R3"
+       ((before ((myin0 (R2)) (tmp0 (R3)))) (after ((myin0 (R2)) (tmp1 (R3))))))
+      ("R2 = Add R2, R3"
+       ((before ((myin0 (R2)) (tmp1 (R3)))) (after ((tmp1 (R3)) (tmp2 (R2))))))
+      ("R3 = Addo R3, R2"
+       ((before ((tmp1 (R3)) (tmp2 (R2)))) (after ((tmp3 (R3))))))
+      ("R3 = Move R3" ((before ((tmp3 (R3)))) (after ((myout0 (R3))))))))
 
     Graph:
     (Satisfiable
      ((instructions
        ((2
-         ("R2(tmp0) = Move R3(myin0)"
-          ((before ((myin0 (R3)))) (after ((myin0 (R3)) (tmp0 (R2)))))))
+         ("R1(tmp0) = Move R3(myin0)"
+          ((before ((myin0 (R3)))) (after ((myin0 (R3)) (tmp0 (R1)))))))
         (3
-         ("R2(tmp1) = Add R3(myin0), R2(tmp0)"
-          ((before ((myin0 (R3)) (tmp0 (R2))))
-           (after ((myin0 (R3)) (tmp1 (R2)))))))
+         ("R0(tmp1) = Add R3(myin0), R1(tmp0)"
+          ((before ((myin0 (R3)) (tmp0 (R1))))
+           (after ((myin0 (R3)) (tmp1 (R0)))))))
         (4
-         ("R0(tmp2) = Add R3(myin0), R2(tmp1)"
-          ((before ((myin0 (R3)) (tmp1 (R2)))) (after ((tmp1 (R2)) (tmp2 (R0)))))))
+         ("R1(tmp2) = Add R3(myin0), R0(tmp1)"
+          ((before ((myin0 (R3)) (tmp1 (R0)))) (after ((tmp1 (R0)) (tmp2 (R1)))))))
         (5
-         ("R2(tmp3) = Addo R2(tmp1), R0(tmp2)"
-          ((before ((tmp1 (R2)) (tmp2 (R0)))) (after ((tmp3 (R2)))))))
+         ("R0(tmp3) = Addo R0(tmp1), R1(tmp2)"
+          ((before ((tmp1 (R0)) (tmp2 (R1)))) (after ((tmp3 (R0)))))))
         (6
-         ("R2(myout0) = Move R2(tmp3)"
-          ((before ((tmp3 (R2)))) (after ((myout0 (R2)))))))))
-      (input ((myin0 (R3)))) (output ((myout0 (R2)))) (moves ())))
+         ("R0(myout0) = Move R0(tmp3)"
+          ((before ((tmp3 (R0)))) (after ((myout0 (R0)))))))))
+      (input ((myin0 (R3)))) (output ((myout0 (R0)))) (moves ())))
 
     Liveness (graph):
     (((2
@@ -324,16 +328,16 @@ let%expect_test "" =
   [%expect {|
     Basic Block:
     (Satisfiable
-     (("R2 = Addo R2, R1"
-       ((before ((myin0 (R2)) (myin1 (R1)))) (after ((myout0 (R2))))))))
+     (("R0 = Addo R0, R1"
+       ((before ((myin0 (R0)) (myin1 (R1)))) (after ((myout0 (R0))))))))
 
     Graph:
     (Satisfiable
      ((instructions
        ((7
-         ("R2(myout0) = Addo R2(myin0), R1(myin1)"
-          ((before ((myin0 (R2)) (myin1 (R1)))) (after ((myout0 (R2)))))))))
-      (input ((myin0 (R2)) (myin1 (R1)))) (output ((myout0 (R2)))) (moves ())))
+         ("R1(myout0) = Addo R1(myin0), R3(myin1)"
+          ((before ((myin0 (R1)) (myin1 (R3)))) (after ((myout0 (R1)))))))))
+      (input ((myin0 (R1)) (myin1 (R3)))) (output ((myout0 (R1)))) (moves ())))
 
     Liveness (graph):
     (((7
@@ -389,22 +393,22 @@ let%expect_test "spill" =
     Basic Block:
     (Satisfiable
      ((Nop
-       ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))
-        (after ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))))
-      ("R3 = Add R0, R2"
-       ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3 SPILL))))
+       ((before ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3))))
+        (after ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3))))))
+      ("R3 = Add R1, R2"
+       ((before ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3 SPILL))))
         (after
-         ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (SPILL)) (tmp1 (R3))))))
-      ("R1 = Add R1, R3"
+         ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (SPILL)) (tmp1 (R3))))))
+      ("R0 = Add R0, R3"
        ((before
-         ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3 SPILL))
+         ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3 SPILL))
           (tmp1 (SPILL))))
-        (after ((myin0 (R0)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R1))))))
-      ("R2 = Add R0, R2"
-       ((before ((myin0 (R0)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R1))))
-        (after ((tmp1 (SPILL)) (tmp2 (R1)) (tmp3 (R2))))))
-      ("R3 = Addo R3, R1"
-       ((before ((tmp1 (R3)) (tmp2 (R1)) (tmp3 (R2))))
+        (after ((myin0 (R1)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R0))))))
+      ("R2 = Add R1, R2"
+       ((before ((myin0 (R1)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R0))))
+        (after ((tmp1 (SPILL)) (tmp2 (R0)) (tmp3 (R2))))))
+      ("R3 = Addo R3, R0"
+       ((before ((tmp1 (R3 SPILL)) (tmp2 (R0)) (tmp3 (R2))))
         (after ((tmp3 (R2)) (tmp4 (R3))))))
       ("R3 = Addo R3, R2"
        ((before ((tmp3 (R2)) (tmp4 (R3)))) (after ((tmp5 (R3))))))
@@ -415,22 +419,21 @@ let%expect_test "spill" =
      ((instructions
        ((8
          (Nop
-          ((before ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3))))
-           (after ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3)))))))
+          ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))
+           (after ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3)))))))
         (9
-         ("R3(tmp1) = Add R2(myin0), R0(myin1)"
-          ((before ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3 SPILL))))
+         ("R3(tmp1) = Add R0(myin0), R2(myin1)"
+          ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3 SPILL))))
            (after
-            ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (SPILL)) (tmp1 (R3)))))))
+            ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (SPILL)) (tmp1 (R3)))))))
         (10
          ("R1(tmp2) = Add R1(myin2), R3(myin3)"
           ((before
-            ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3 SPILL))
-             (tmp1 (SPILL))))
-           (after ((myin0 (R2)) (myin1 (R0)) (tmp1 (SPILL)) (tmp2 (R1)))))))
+            ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3)) (tmp1 (SPILL))))
+           (after ((myin0 (R0)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R1)))))))
         (11
-         ("R0(tmp3) = Add R2(myin0), R0(myin1)"
-          ((before ((myin0 (R2)) (myin1 (R0)) (tmp1 (R3)) (tmp2 (R1))))
+         ("R0(tmp3) = Add R0(myin0), R2(myin1)"
+          ((before ((myin0 (R0)) (myin1 (R2)) (tmp1 (R3 SPILL)) (tmp2 (R1))))
            (after ((tmp1 (R3)) (tmp2 (R1)) (tmp3 (R0)))))))
         (12
          ("R3(tmp4) = Addo R3(tmp1), R1(tmp2)"
@@ -442,7 +445,7 @@ let%expect_test "spill" =
         (14
          ("R3(myout0) = Move R3(tmp5)"
           ((before ((tmp5 (R3)))) (after ((myout0 (R3)))))))))
-      (input ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3))))
+      (input ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))
       (output ((myout0 (R3))))
       (moves
        (((node_in (N 9)) (node_out (N 10))
@@ -559,17 +562,17 @@ let%expect_test "loop" =
     (Satisfiable
      ((instructions
        ((15
-         ("R2(tmp1) = Add R3(myin0), R0(myin1)"
-          ((before ((myin0 (R3)) (myin1 (R0))))
-           (after ((myin0 (R3)) (myin1 (R0)) (tmp1 (R2)))))))
+         ("R3(tmp1) = Add R0(myin0), R1(myin1)"
+          ((before ((myin0 (R0)) (myin1 (R1))))
+           (after ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3)))))))
         (16
-         ("R0(myin1) = Loop R0(myin1)"
-          ((before ((myin0 (R3)) (myin1 (R0)) (tmp1 (R2))))
-           (after ((myin0 (R3)) (myin1 (R0)) (tmp1 (R2)))))))
+         ("R1(myin1) = Loop R1(myin1)"
+          ((before ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3))))
+           (after ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3)))))))
         (17
-         ("R3(myout0) = Add R2(tmp1), R3(myin0)"
-          ((before ((myin0 (R3)) (tmp1 (R2)))) (after ((myout0 (R3)))))))))
-      (input ((myin0 (R3)) (myin1 (R0)))) (output ((myout0 (R3)))) (moves ())))
+         ("R3(myout0) = Add R3(tmp1), R0(myin0)"
+          ((before ((myin0 (R0)) (tmp1 (R3)))) (after ((myout0 (R3)))))))))
+      (input ((myin0 (R0)) (myin1 (R1)))) (output ((myout0 (R3)))) (moves ())))
 
     Liveness (graph):
     (((15

@@ -1,5 +1,7 @@
 open! Core
 
+open Z3i
+
 include Regalloc_intf
 
 module Make_constraint(Physical_register : Physical_register)
@@ -223,70 +225,80 @@ module Make_allocator
 
   module Register_mapping = struct
     type t =
-      { set_sort : Z3.Sort.sort
-      ; set_of_kind : Z3.Expr.expr Physical_register.Kind.Map.t
+      { set_sort : S.bv Sort.t
+      ; set_of_kind : Bitvector.t Physical_register.Kind.Map.t
       ; preg_to_int : int Physical_register.Map.t
       ; int_to_preg : Physical_register.t Int.Map.t
-      ; preg_to_set : Z3.Expr.expr Physical_register.Map.t
+      ; preg_to_set : Bitvector.t Physical_register.Map.t
+      ; symbol_builder : Symbol_builder.t
       }
 
     let set_of_preg t preg =
       Map.find_exn t.preg_to_set preg
 
-    let constrain_to_single_reg (_t : t) (z3 : #Z3_wrap.z3) const =
-      z3#bvset#has_single_member const
+    let constrain_to_single_reg (_t : t) const =
+      Bitvector.Set.has_single_member const
 
-    let constrain_to_at_least_one_reg (_t : t) (z3 : #Z3_wrap.z3) const =
-      z3#not (z3#bvset#is_empty const)
+    let constrain_to_at_least_one_reg (_t : t) const =
+      Boolean.not (Bitvector.Set.is_empty const)
 
-    let distinct_registers (_t : t) (z3 : #Z3_wrap.z3) constants =
+    let distinct_registers (_t : t) constants =
       List.map constants
         ~f:(fun c ->
             List.init number_of_physical_registers
               ~f:(fun bit ->
-                  z3#bv#extract_single ~bit c
+                  Bitvector.extract_single c bit
                 )
           )
       |> List.transpose_exn
       |> List.map ~f:(fun bitlist ->
-          z3#bv#concat bitlist
-          |> z3#bvset#has_max_one_member
+          Bitvector.concat_list bitlist
+          |> Bitvector.Set.has_max_one_member
         )
 
-    let make_set_numeral_internal ~preg_to_int ~set_sort:_ z3 regs =
+    let make_set_numeral_internal ~preg_to_int ~set_sort regs =
       (* CR smuenzel: little or big endian??? *)
       let s = Int.Set.map regs ~f:(Map.find_exn preg_to_int) in
       List.init number_of_physical_registers
         ~f:(fun i ->
             Set.mem s i
           )
-      |> z3#bv#num_bool
+      |> Bitvector.Numeral.bool (Sort.context set_sort)
 
-    let make_set_numeral { preg_to_int; set_sort; _} z3 regs =
-      make_set_numeral_internal ~preg_to_int ~set_sort z3 regs
+    let make_set_numeral { preg_to_int; set_sort; _} regs =
+      make_set_numeral_internal ~preg_to_int ~set_sort regs
 
-    let make_set_constant t (z3 : #Z3_wrap.z3) (opt : #Z3_wrap.optimizer) kind =
-      let constant = z3#bv#const number_of_physical_registers in
-      opt#add (z3#bvset#is_subset ~of_:(Map.find_exn t.set_of_kind kind) constant);
+    let make_set_constant t (opt : Optimize.t) kind =
+      let constant =
+        Expr.const_i
+          (Symbol_builder.sym_int t.symbol_builder)
+          t.set_sort
+      in
+      Optimize.add
+        opt
+        (Bitvector.Set.is_subset
+           ~of_:(Map.find_exn t.set_of_kind kind) constant
+        );
       constant
 
-    let numeral_to_registers t (z3 : #Z3_wrap.z3) num =
-      z3#bv#numeral_to_binary_array_exn num
+    let numeral_to_registers t num =
+      Expr.numeral_to_binary_array_exn num
       |> Array.filter_mapi ~f:(fun i bool ->
           if bool
           then Map.find t.int_to_preg i
           else None
         )
 
-    let numeral_to_single_register_exn t (z3 : #Z3_wrap.z3) num =
-      numeral_to_registers t z3 num
+    let numeral_to_single_register_exn t num =
+      numeral_to_registers t num
       |> function
       | [| single |] -> single
       | result -> raise_s [%message "not a single register"
                     (result : Physical_register.t array)
              ]
 
-    let create (z3 : #Z3_wrap.z3) : t =
+    let create (symbol_builder : Symbol_builder.t) : t =
+      let context = Symbol_builder.context symbol_builder in
       let preg_to_int, int_to_preg =
         List.mapi Physical_register.all
           ~f:(Fn.flip Tuple2.create)
@@ -295,8 +307,8 @@ module Make_allocator
           ~f:Tuple2.create
         |> Int.Map.of_alist_exn
       in
-      let set_sort = z3#bv#sort number_of_physical_registers in
-      let make_set_numeral = make_set_numeral_internal ~preg_to_int ~set_sort z3 in
+      let set_sort = Sort.create_bitvector context ~bits:number_of_physical_registers in
+      let make_set_numeral = make_set_numeral_internal ~preg_to_int ~set_sort in
       let set_of_kind =
         Map.map
           Physical_register.all_by_kind
@@ -314,6 +326,7 @@ module Make_allocator
       ; preg_to_int
       ; int_to_preg
       ; preg_to_set
+      ; symbol_builder
       }
   end
 
@@ -321,21 +334,23 @@ module Make_allocator
   module Constraint = struct
     include Instruction_with_arguments.Instruction.Metadata.Constraint
 
-    let rec enforce (t : t) mapping (z3 : Z3_wrap.z3) ~argument_var =
+    let rec enforce (t : t) mapping ~argument_var =
       match t with 
       | Same (a,b) ->
-        z3#eq (argument_var a) (argument_var b)
+        Boolean.eq (argument_var a) (argument_var b)
       | Distinct set ->
-        z3#distinct (Set.to_list set |> List.map ~f:argument_var)
+        Boolean.distinct
+          (Set.to_list set |> List.map ~f:argument_var)
       | One_of (arg, rs) ->
         let arg = argument_var arg in
         Set.fold ~init:[] rs ~f:(fun acc r ->
-            z3#eq arg (Register_mapping.set_of_preg mapping r)
+            Boolean.eq
+              arg (Register_mapping.set_of_preg mapping r)
             :: acc
           )
-        |> z3#or_
+        |> Boolean.or_
       | Exactly (arg, r) ->
-        enforce (One_of (arg, Physical_register.Set.singleton r)) mapping z3 ~argument_var
+        enforce (One_of (arg, Physical_register.Set.singleton r)) mapping ~argument_var
   end
 
   module Register_or_slot = struct
@@ -691,31 +706,30 @@ module Make_allocator
 
   module Z3_assist = struct
     let add_move_count_penalty
-        (opt : #Z3_wrap.optimizer)
-        (z3 : #Z3_wrap.z3)
+        (opt : Optimize.t)
+        symbol_builder
         (p : Parameters.t)
         ~prev
         ~next
       =
-      let size = z3#bv#size_e prev in
+      let size = Bitvector.size_e prev in
       List.init size
         ~f:(fun bit ->
             let has_move =
-              z3#bv#and_
-                (z3#bv#not (z3#bv#extract_single prev ~bit))
-                (z3#bv#extract_single next ~bit)
+              Bitvector.and_
+                (Bitvector.not (Bitvector.extract_single prev bit))
+                (Bitvector.extract_single next bit)
             in
-            opt#add_soft
+            Optimize.add_soft
+              opt
               ~weight:p.move_penalty
-              (z3#eq
-                 has_move
-                 (z3#bv#num_zero has_move)
-              )
+              (Bitvector.is_zero has_move)
+              (Symbol_builder.sym symbol_builder)
           )
 
     let add_reload_penalty
-        (opt : #Z3_wrap.optimizer)
-        (z3 : #Z3_wrap.z3)
+        (opt : Optimize.t)
+        symbol_builder
         (p : Parameters.t)
         ~prev
         ~prev_spill
@@ -723,25 +737,26 @@ module Make_allocator
         ~next_spill
         =
       let has_reload =
-        z3#and_
-          [ z3#eq prev (z3#bv#num_zero_e prev)
-          ; z3#neq prev_spill (z3#bv#num_zero_e prev_spill)
-          ; z3#neq next (z3#bv#num_zero_e next)
+        Boolean.and_
+          [ Bitvector.is_zero prev
+          ; Bitvector.is_not_zero prev_spill
+          ; Bitvector.is_not_zero next
           ]
       in
       let no_spill =
-        z3#eq
-          (z3#bv#and_
-             (z3#bv#not prev_spill)
+        Bitvector.is_zero
+          (Bitvector.and_
+             (Bitvector.not prev_spill)
              next_spill)
-          (z3#bv#num_zero prev_spill)
       in
-      [ opt#add_soft
+      [ Optimize.add_soft opt
           ~weight:p.move_penalty
           no_spill
-      ; opt#add_soft
+          (Symbol_builder.sym symbol_builder)
+      ; Optimize.add_soft opt
           ~weight:p.reload_cost
-          (z3#not has_reload)
+          (Boolean.not has_reload)
+          (Symbol_builder.sym symbol_builder)
       ]
   end
 
@@ -797,74 +812,68 @@ module Make_allocator
 
   module Allocation_variable = struct
     type t =
-      { reg_set : Z3_wrap.Expr.t 
-      ; spill : Z3_wrap.Expr.t
+      { reg_set : Bitvector.t
+      ; spill : Bitvector.t
       } [@@deriving fields]
 
-    let constrain_to_single_reg mapping z3 t =
+    let constrain_to_single_reg mapping t =
       Register_mapping.constrain_to_single_reg
         mapping
-        z3
         t.reg_set
 
-    let constrain_to_single_reg_no_spill mapping z3 t =
-      z3#and_
+    let constrain_to_single_reg_no_spill mapping t =
+      Boolean.and_
         [ Register_mapping.constrain_to_single_reg
             mapping
-            z3
             t.reg_set
-        ; z3#eq t.spill (z3#bv#num_zero t.spill)
+        ; Bitvector.is_zero t.spill
         ]
 
-    let constrain_to_at_least_one_reg mapping z3 t =
+    let constrain_to_at_least_one_reg mapping t =
       Register_mapping.constrain_to_at_least_one_reg 
         mapping
-        z3
         t.reg_set
 
-    let constrain_to_at_least_one_location mapping z3 t =
-      z3#or_
+    let constrain_to_at_least_one_location mapping t =
+      Boolean.or_
         [ Register_mapping.constrain_to_at_least_one_reg 
             mapping
-            z3
             t.reg_set
-        ; z3#neq t.spill (z3#bv#num_zero t.spill)
+        ; Bitvector.is_not_zero t.spill
         ]
 
-    let constrain_to_single_location mapping z3 t =
-      z3#xor_
-        [ Register_mapping.constrain_to_single_reg
+    let constrain_to_single_location mapping t =
+      Boolean.xor
+        (Register_mapping.constrain_to_single_reg
             mapping
-            z3
             t.reg_set
-        ; z3#neq t.spill (z3#bv#num_zero t.spill)
-        ]
+        )
+        (Bitvector.is_not_zero t.spill)
 
-    let distinct_registers mapping z3 ts =
+    let distinct_registers mapping ts =
       Register_mapping.distinct_registers
         mapping
-        z3
         (List.map ts ~f:reg_set)
 
-    let is_subset t ~of_ z3 =
-      z3#and_
-        [ z3#bvset#is_subset t.reg_set ~of_:of_.reg_set
-        ; z3#bvset#is_subset t.spill ~of_:of_.spill
+    let is_subset t ~of_ =
+      Boolean.and_
+        [ Bitvector.Set.is_subset t.reg_set ~of_:of_.reg_set
+        ; Bitvector.Set.is_subset t.spill ~of_:of_.spill
         ]
 
     let const_e_exn model t =
-      { reg_set = model#const_e_exn t.reg_set
-      ; spill = model#const_e_exn t.spill
+      { reg_set = Model.const_interp_e_exn model t.reg_set
+      ; spill = Model.const_interp_e_exn model t.spill
       }
 
-    let numeral_to_single_register_exn register_mapping z3 t =
-      Register_mapping.numeral_to_single_register_exn register_mapping z3 t.reg_set
+    let numeral_to_single_register_exn register_mapping t =
+      Register_mapping.numeral_to_single_register_exn register_mapping t.reg_set
 
     let numeral_spill t =
       (Z3i.Expr.numeral_to_binary_array_exn t.spill).(0)
 
-    let numeral_to_registers register_mapping z3 t =
-      Register_mapping.numeral_to_registers register_mapping z3 t.reg_set
+    let numeral_to_registers register_mapping t =
+      Register_mapping.numeral_to_registers register_mapping t.reg_set
     , numeral_spill t
 
     module Model = struct
@@ -874,10 +883,10 @@ module Make_allocator
         ; spill : bool
         } [@@deriving sexp_of]
 
-      let const_e_exn z3 model register_mapping (t' : t') =
+      let const_e_exn model register_mapping (t' : t') =
         let t' = const_e_exn model t' in
         let reg_set, spill =
-          numeral_to_registers register_mapping z3 t'
+          numeral_to_registers register_mapping t'
         in
         let reg_set = Physical_register.Set.of_array reg_set in
         { reg_set
@@ -939,19 +948,18 @@ module Make_allocator
       ~(input)
       ~(output)
       (instructions : Variable_name.t Instruction_with_arguments.t array)
-      z3
+      symbol_builder
     =
     ignore parameters;
-    let opt = z3#opt in
-    let register_mapping = Register_mapping.create z3 in
+    let opt = Optimize.create (Symbol_builder.context symbol_builder) in
+    let register_mapping = Register_mapping.create symbol_builder in
     let create_allocation_variable kind =
       { Allocation_variable.reg_set =
           Register_mapping.make_set_constant
             register_mapping
-            z3
             opt
             kind
-      ; spill = z3#bv#const 1
+      ; spill = Bitvector.const ~bits:1 (Symbol_builder.sym symbol_builder)
       }
     in
     let liveness = Liveness.create ~input ~output instructions in
@@ -1011,16 +1019,16 @@ module Make_allocator
                        reg_set = next
                      ; spill = next_spill
                      }) ->
-                  Z3_assist.add_move_count_penalty opt z3 parameters
+                  Z3_assist.add_move_count_penalty opt symbol_builder parameters
                     ~prev ~next
-                  |> (ignore : Z3_wrap.optimizer_goal list -> unit)
+                  |> (ignore : S.bool Optimize.Goal.t list -> unit)
                   ;
-                  Z3_assist.add_reload_penalty opt z3 parameters
+                  Z3_assist.add_reload_penalty opt symbol_builder parameters
                     ~prev
                     ~prev_spill
                     ~next
                     ~next_spill
-                  |> (ignore : Z3_wrap.optimizer_goal list -> unit)
+                  |> (ignore : S.bool Optimize.Goal.t list -> unit)
                   ;
               )
          )
@@ -1032,15 +1040,14 @@ module Make_allocator
                 Map.map vars
                   ~f:(Allocation_variable.constrain_to_at_least_one_location
                         register_mapping
-                        z3)
+                     )
                 |> Map.data
-                |> opt#add_list
+                |> Optimize.add_list opt
                 ;
                 Allocation_variable.distinct_registers
                   register_mapping
-                  z3
                   (Map.data vars)
-                |> opt#add_list
+                |> Optimize.add_list opt
               )
          )
     ;
@@ -1048,10 +1055,9 @@ module Make_allocator
       Map.map vars
         ~f:(Allocation_variable.constrain_to_single_reg_no_spill
               register_mapping
-              z3
            )
       |> Map.data
-      |> opt#add_list
+      |> Optimize.add_list opt
     in
     let instruction_inputs =
       (* Explicit inputs, since we may need to select from multiple registers *)
@@ -1069,9 +1075,8 @@ module Make_allocator
                   [ Allocation_variable.is_subset
                       vvar
                       ~of_:(Map.find_exn before vname)
-                      z3
-                  ; Allocation_variable.constrain_to_single_reg register_mapping z3 vvar
-                  ] |> opt#add_list
+                  ; Allocation_variable.constrain_to_single_reg register_mapping vvar
+                  ] |> Optimize.add_list opt
                 );
             input_vars
           )
@@ -1087,13 +1092,13 @@ module Make_allocator
                 | `Left _ -> ()
                 | `Right output ->
                   (* Outputs should be single reg *)
-                  Allocation_variable.constrain_to_single_reg_no_spill register_mapping z3 output
-                  |> opt#add
+                  Allocation_variable.constrain_to_single_reg_no_spill register_mapping output
+                  |> Optimize.add opt
                 | `Both (before, after) ->
                   (* No implicit moves through instructions, only destruction of
                      variables allowed *)
-                  Allocation_variable.is_subset after ~of_:before z3
-                  |> opt#add
+                  Allocation_variable.is_subset after ~of_:before
+                  |> Optimize.add opt
                )
         );
     array_iter3_exn
@@ -1120,9 +1125,8 @@ module Make_allocator
                 Constraint.enforce
                   constr
                   register_mapping
-                  z3
                   ~argument_var
-                |> opt#add
+                |> Optimize.add opt
               );
           let destroyed =
             Instruction.Metadata.destroys
@@ -1133,16 +1137,16 @@ module Make_allocator
             let destroyed =
               Register_mapping.make_set_numeral
                 register_mapping
-                z3
                 destroyed
             in
             Map.iter
               register_state.after
               ~f:(fun allocation_variable ->
-                  z3#bv#and_
+                  Bitvector.and_
                     allocation_variable.reg_set
                     destroyed
-                  |> opt#add
+                  |> Bitvector.is_zero
+                  |> Optimize.add opt
                 )
           end;
           Instruction.Metadata.soft_constraints
@@ -1152,24 +1156,25 @@ module Make_allocator
                 let reward = Parameters.compute_reward parameters constr.reward in
                 let negate =
                   if constr.negate
-                  then z3#not
+                  then Boolean.not
                   else Fn.id
                 in
-                Constraint.enforce
-                  constr.base
-                  register_mapping
-                  z3
-                  ~argument_var
-                |> negate
-                |> opt#add_soft ~weight:reward
-                |> (ignore : Z3_wrap.optimizer_goal -> unit)
+                let c =
+                  Constraint.enforce
+                    constr.base
+                    register_mapping
+                    ~argument_var
+                  |> negate
+                in
+                Optimize.add_soft opt ~weight:reward c (Symbol_builder.sym symbol_builder)
+                |> (ignore : S.bool Optimize.Goal.t -> unit)
               );
         )
     ;
     if debug
-    then print_endline opt#to_string;
-    opt#check_current
-    |> Z3_wrap.Solver_result.Generic.map
+    then print_endline (Optimize.to_string opt);
+    Optimize.check_current_and_get_model opt
+    |> Solver_result.map
       ~f:(fun model ->
           let before_and_after =
             Array.map liveness_vars_per_instruction
@@ -1197,16 +1202,16 @@ module Make_allocator
                      assert (Array.length inputs = Array.length input_vars);
                      input_vars
                      |> Array.map
-                          ~f:(Allocation_variable.numeral_to_single_register_exn register_mapping z3)
+                          ~f:(Allocation_variable.numeral_to_single_register_exn register_mapping)
                    in
                    let outputs =
                      Array.map outputs ~f:(Map.find_exn before_and_after.after)
                      |> Array.map
-                          ~f:(Allocation_variable.numeral_to_single_register_exn register_mapping z3)
+                          ~f:(Allocation_variable.numeral_to_single_register_exn register_mapping)
                    in
                    let before_and_after =
                      Register_state.map before_and_after
-                       ~f:(Map.map ~f:(Allocation_variable.numeral_to_registers register_mapping z3))
+                       ~f:(Map.map ~f:(Allocation_variable.numeral_to_registers register_mapping))
                    in
                    { Instruction_with_arguments.
                      inputs
@@ -1329,11 +1334,11 @@ module Make_allocator
       ~(input)
       ~(output)
       (instructions : Variable_name.t Instruction_node.t array)
-      z3
+      symbol_builder
     =
     ignore parameters;
-    let opt = z3#opt in
-    let register_mapping = Register_mapping.create z3 in
+    let opt = Optimize.create (Symbol_builder.context symbol_builder) in
+    let register_mapping = Register_mapping.create symbol_builder in
     let liveness, register_kinds =
       Liveness.create_from_graph
         ~input
@@ -1344,10 +1349,9 @@ module Make_allocator
       { Allocation_variable.reg_set =
           Register_mapping.make_set_constant
             register_mapping
-            z3
             opt
             kind
-      ; spill = z3#bv#const 1
+      ; spill = Bitvector.const (Symbol_builder.sym symbol_builder) ~bits:1
       }
     in
     let create_allocation_variable name =
@@ -1397,16 +1401,14 @@ module Make_allocator
       |> List.map
         ~f:(apply
               register_mapping
-              z3
            )
     in
     (* Distinct registers *)
     let distinct_registers_map map =
       Allocation_variable.distinct_registers
         register_mapping
-        z3
         (Map.data map)
-      |> opt#add_list
+      |> Optimize.add_list opt
     in
     distinct_registers_map input_states;
     distinct_registers_map output_states;
@@ -1421,11 +1423,11 @@ module Make_allocator
           alloc_constraint
             at_output
             Allocation_variable.constrain_to_at_least_one_location
-          |> opt#add_list;
+          |> Optimize.add_list opt;
           alloc_constraint
             at_input
             Allocation_variable.constrain_to_at_least_one_location
-          |> opt#add_list;
+          |> Optimize.add_list opt;
         );
     (* Outputs are single registers, inputs are registers *)
     Hashtbl.iter variable_states
@@ -1433,11 +1435,11 @@ module Make_allocator
           alloc_constraint
             defines
             Allocation_variable.constrain_to_single_reg_no_spill
-          |> opt#add_list;
+          |> Optimize.add_list opt;
           alloc_constraint
             reads
             Allocation_variable.constrain_to_single_reg
-          |> opt#add_list;
+          |> Optimize.add_list opt;
           (* Our chosen input register to read needs to be one of the
              locations of the input *)
           Map.iter2 at_input reads
@@ -1445,20 +1447,20 @@ module Make_allocator
                 match data with
                 | `Right _ | `Left _ -> ()
                 | `Both (at_input, read) ->
-                  Allocation_variable.is_subset read ~of_:at_input z3
-                  |> opt#add
+                  Allocation_variable.is_subset read ~of_:at_input
+                  |> Optimize.add opt
               )
         );
     (* Global inputs are single registers *)
     alloc_constraint
       input_states
       Allocation_variable.constrain_to_single_reg_no_spill
-    |> opt#add_list;
+    |> Optimize.add_list opt;
     (* Global outputs have a single location *)
     alloc_constraint
       output_states
       Allocation_variable.constrain_to_single_location
-    |> opt#add_list;
+    |> Optimize.add_list opt;
     (* Variables don't move during instructions *)
     Hashtbl.iter variable_states
       ~f:(fun { at_input; at_output; _ } ->
@@ -1467,8 +1469,8 @@ module Make_allocator
                 match data with
                 | `Right _ | `Left _ -> ()
                 | `Both (input, output) ->
-                  Allocation_variable.is_subset output ~of_:input z3
-                  |> opt#add
+                  Allocation_variable.is_subset output ~of_:input
+                  |> Optimize.add opt
               )
         )
     ;
@@ -1490,16 +1492,16 @@ module Make_allocator
           ; spill = next_spill
           } = next
       in
-      Z3_assist.add_move_count_penalty opt z3 parameters
+      Z3_assist.add_move_count_penalty opt symbol_builder parameters
         ~prev ~next
-      |> (ignore : Z3_wrap.optimizer_goal list -> unit)
+      |> (ignore : S.bool Optimize.Goal.t list -> unit)
       ;
-      Z3_assist.add_reload_penalty opt z3 parameters
+      Z3_assist.add_reload_penalty opt symbol_builder parameters
         ~prev
         ~prev_spill
         ~next
         ~next_spill
-      |> (ignore : Z3_wrap.optimizer_goal list -> unit)
+      |> (ignore : S.bool Optimize.Goal.t list -> unit)
       ;
     in
     let add_move_and_reload_penalty ~from ~to_ ~prev ~next =
@@ -1557,26 +1559,26 @@ module Make_allocator
                   Constraint.enforce
                     c
                     register_mapping
-                    z3
                     ~argument_var
-                  |> opt#add
+                  |> Optimize.add opt
                 );
             Array.iter soft_constraints
               ~f:(fun c ->
                   let reward = Parameters.compute_reward parameters c.reward in
                   let negate =
                     if c.negate
-                    then z3#not
+                    then Boolean.not
                     else Fn.id
                   in
+                  let c =
                   Constraint.enforce
                     c.base
                     register_mapping
-                    z3
                     ~argument_var
                   |> negate
-                  |> opt#add_soft ~weight:reward
-                  |> (ignore : Z3_wrap.optimizer_goal -> unit)
+                  in
+                  Optimize.add_soft opt ~weight:reward c (Symbol_builder.sym symbol_builder)
+                  |> (ignore : S.bool Optimize.Goal.t -> unit)
                 );
         );
     (* Instruction destroys *)
@@ -1592,16 +1594,16 @@ module Make_allocator
             let destroyed =
               Register_mapping.make_set_numeral
                 register_mapping
-                z3
                 destroyed
             in
             Map.iter
               at_output
               ~f:(fun allocation_variable ->
-                  z3#bv#and_
+                  Bitvector.and_
                     allocation_variable.reg_set
                     destroyed
-                  |> opt#add
+                  |> Bitvector.is_zero
+                  |> Optimize.add opt
                 )
           end;
         );
@@ -1619,8 +1621,7 @@ module Make_allocator
                   Map.find_exn at_input var
                   |> Allocation_variable.constrain_to_single_location
                        register_mapping
-                       z3
-                  |> opt#add
+                  |> Optimize.add opt
               )
         );
     (* CR smuenzel: do we need this? *)
@@ -1641,9 +1642,8 @@ module Make_allocator
                         ~f:(fun v ->
                             Allocation_variable.constrain_to_single_location
                               register_mapping
-                              z3
                               v
-                            |> opt#add
+                            |> Optimize.add opt
                           )
                   )
             end
@@ -1652,12 +1652,12 @@ module Make_allocator
     ;
     (* Find solution *)
     if debug
-    then print_endline opt#to_string;
-    opt#check_current
-    |> Z3_wrap.Solver_result.Generic.map
+    then print_endline (Optimize.to_string opt);
+    Optimize.check_current_and_get_model opt
+    |> Solver_result.map
       ~f:(fun model ->
           let get_model a =
-            Allocation_variable.Model.const_e_exn z3 model register_mapping a
+            Allocation_variable.Model.const_e_exn model register_mapping a
           in
           let variable_states =
             Hashtbl.map
