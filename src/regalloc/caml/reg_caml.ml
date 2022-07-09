@@ -96,11 +96,11 @@ module Make(Platform : Platform_intf.S) = struct
         ~f:(fun ~key:kind ~data acc ->
             Set.fold ~init:acc data
               ~f:(fun acc reg ->
-                  Map.add_exn acc ~key:reg ~data:kind
+                  Core.Map.add_exn acc ~key:reg ~data:kind
                 )
           )
 
-    let kind t = Map.find_exn kind_by_t t
+    let kind t = Core.Map.find_exn kind_by_t t
   end
 
   module _ : Regalloc_intf.Physical_register = Physical_register
