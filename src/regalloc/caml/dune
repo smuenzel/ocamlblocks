@@ -1,0 +1,6 @@
+(library
+  (name blocks_regalloc_caml)
+  (libraries core blocks_regalloc ocamlc_kit z3 z3i)
+  (inline_tests)
+  (preprocess (pps ppx_expect ppx_jane))
+  )

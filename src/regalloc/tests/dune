@@ -1,0 +1,6 @@
+(library
+  (name blocks_regalloc_tests)
+  (libraries core blocks_regalloc z3i)
+  (inline_tests)
+  (preprocess (pps ppx_expect ppx_jane))
+  )

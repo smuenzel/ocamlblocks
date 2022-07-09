@@ -1,0 +1,6 @@
+[submodule "vendor/ocaml_z3i"]
+	path = solver-intf/z3i
+	url = git@github.com:smuenzel/ocaml_z3i.git
+[submodule "ocamlc-kit"]
+	path = ocamlc-kit
+	url = git@github.com:smuenzel/ocamlc-kit.git

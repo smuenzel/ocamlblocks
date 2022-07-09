@@ -1,0 +1,5 @@
+(executable
+   (name print_deps)
+   (libraries core)
+   (preprocess (pps ppx_jane))
+   )
