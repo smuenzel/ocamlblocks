@@ -282,7 +282,7 @@ module Make_allocator
       constant
 
     let numeral_to_registers t num =
-      Expr.numeral_to_binary_array_exn num
+      Bitvector.Numeral.to_binary_array_exn num
       |> Array.filter_mapi ~f:(fun i bool ->
           if bool
           then Map.find t.int_to_preg i
@@ -307,7 +307,7 @@ module Make_allocator
           ~f:Tuple2.create
         |> Int.Map.of_alist_exn
       in
-      let set_sort = Sort.create_bitvector context ~bits:number_of_physical_registers in
+      let set_sort = Bitvector.create_sort context ~bits:number_of_physical_registers in
       let make_set_numeral = make_set_numeral_internal ~preg_to_int ~set_sort in
       let set_of_kind =
         Map.map
@@ -348,7 +348,7 @@ module Make_allocator
               arg (Register_mapping.set_of_preg mapping r)
             :: acc
           )
-        |> Boolean.or_
+        |> Boolean.or_list
       | Exactly (arg, r) ->
         enforce (One_of (arg, Physical_register.Set.singleton r)) mapping ~argument_var
   end
@@ -737,7 +737,7 @@ module Make_allocator
         ~next_spill
         =
       let has_reload =
-        Boolean.and_
+        Boolean.and_list
           [ Bitvector.is_zero prev
           ; Bitvector.is_not_zero prev_spill
           ; Bitvector.is_not_zero next
@@ -823,11 +823,10 @@ module Make_allocator
 
     let constrain_to_single_reg_no_spill mapping t =
       Boolean.and_
-        [ Register_mapping.constrain_to_single_reg
+        (Register_mapping.constrain_to_single_reg
             mapping
-            t.reg_set
-        ; Bitvector.is_zero t.spill
-        ]
+            t.reg_set)
+        (Bitvector.is_zero t.spill)
 
     let constrain_to_at_least_one_reg mapping t =
       Register_mapping.constrain_to_at_least_one_reg 
@@ -836,11 +835,10 @@ module Make_allocator
 
     let constrain_to_at_least_one_location mapping t =
       Boolean.or_
-        [ Register_mapping.constrain_to_at_least_one_reg 
+        (Register_mapping.constrain_to_at_least_one_reg 
             mapping
-            t.reg_set
-        ; Bitvector.is_not_zero t.spill
-        ]
+            t.reg_set)
+        (Bitvector.is_not_zero t.spill)
 
     let constrain_to_single_location mapping t =
       Boolean.xor
@@ -857,9 +855,8 @@ module Make_allocator
 
     let is_subset t ~of_ =
       Boolean.and_
-        [ Bitvector.Set.is_subset t.reg_set ~of_:of_.reg_set
-        ; Bitvector.Set.is_subset t.spill ~of_:of_.spill
-        ]
+        (Bitvector.Set.is_subset t.reg_set ~of_:of_.reg_set)
+        (Bitvector.Set.is_subset t.spill ~of_:of_.spill)
 
     let const_e_exn model t =
       { reg_set = Model.const_interp_e_exn model t.reg_set
@@ -870,7 +867,7 @@ module Make_allocator
       Register_mapping.numeral_to_single_register_exn register_mapping t.reg_set
 
     let numeral_spill t =
-      (Z3i.Expr.numeral_to_binary_array_exn t.spill).(0)
+      (Bitvector.Numeral.to_binary_array_exn t.spill).(0)
 
     let numeral_to_registers register_mapping t =
       Register_mapping.numeral_to_registers register_mapping t.reg_set
