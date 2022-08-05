@@ -246,36 +246,36 @@ let%expect_test "test_0" =
   [%expect {|
     Basic Block:
     (Satisfiable
-     (("R3 = Move R2"
-       ((before ((myin0 (R2)))) (after ((myin0 (R2)) (tmp0 (R3))))))
-      ("R3 = Add R2, R3"
-       ((before ((myin0 (R2)) (tmp0 (R3)))) (after ((myin0 (R2)) (tmp1 (R3))))))
-      ("R2 = Add R2, R3"
-       ((before ((myin0 (R2)) (tmp1 (R3)))) (after ((tmp1 (R3)) (tmp2 (R2))))))
-      ("R3 = Addo R3, R2"
-       ((before ((tmp1 (R3)) (tmp2 (R2)))) (after ((tmp3 (R3))))))
+     (("R2 = Move R0"
+       ((before ((myin0 (R0)))) (after ((myin0 (R0)) (tmp0 (R2))))))
+      ("R3 = Add R0, R2"
+       ((before ((myin0 (R0)) (tmp0 (R2)))) (after ((myin0 (R0)) (tmp1 (R3))))))
+      ("R1 = Add R0, R3"
+       ((before ((myin0 (R0)) (tmp1 (R3)))) (after ((tmp1 (R3)) (tmp2 (R1))))))
+      ("R3 = Addo R3, R1"
+       ((before ((tmp1 (R3)) (tmp2 (R1)))) (after ((tmp3 (R3))))))
       ("R3 = Move R3" ((before ((tmp3 (R3)))) (after ((myout0 (R3))))))))
 
     Graph:
     (Satisfiable
      ((instructions
        ((2
-         ("R1(tmp0) = Move R3(myin0)"
-          ((before ((myin0 (R3)))) (after ((myin0 (R3)) (tmp0 (R1)))))))
+         ("R0(tmp0) = Move R3(myin0)"
+          ((before ((myin0 (R3)))) (after ((myin0 (R3)) (tmp0 (R0)))))))
         (3
-         ("R0(tmp1) = Add R3(myin0), R1(tmp0)"
-          ((before ((myin0 (R3)) (tmp0 (R1))))
-           (after ((myin0 (R3)) (tmp1 (R0)))))))
+         ("R2(tmp1) = Add R3(myin0), R0(tmp0)"
+          ((before ((myin0 (R3)) (tmp0 (R0))))
+           (after ((myin0 (R3)) (tmp1 (R2)))))))
         (4
-         ("R1(tmp2) = Add R3(myin0), R0(tmp1)"
-          ((before ((myin0 (R3)) (tmp1 (R0)))) (after ((tmp1 (R0)) (tmp2 (R1)))))))
+         ("R3(tmp2) = Add R3(myin0), R2(tmp1)"
+          ((before ((myin0 (R3)) (tmp1 (R2)))) (after ((tmp1 (R2)) (tmp2 (R3)))))))
         (5
-         ("R0(tmp3) = Addo R0(tmp1), R1(tmp2)"
-          ((before ((tmp1 (R0)) (tmp2 (R1)))) (after ((tmp3 (R0)))))))
+         ("R2(tmp3) = Addo R2(tmp1), R3(tmp2)"
+          ((before ((tmp1 (R2)) (tmp2 (R3)))) (after ((tmp3 (R2)))))))
         (6
-         ("R0(myout0) = Move R0(tmp3)"
-          ((before ((tmp3 (R0)))) (after ((myout0 (R0)))))))))
-      (input ((myin0 (R3)))) (output ((myout0 (R0)))) (moves ())))
+         ("R2(myout0) = Move R2(tmp3)"
+          ((before ((tmp3 (R2)))) (after ((myout0 (R2)))))))))
+      (input ((myin0 (R3)))) (output ((myout0 (R2)))) (moves ())))
 
     Liveness (graph):
     (((2
@@ -335,9 +335,9 @@ let%expect_test "" =
     (Satisfiable
      ((instructions
        ((7
-         ("R1(myout0) = Addo R1(myin0), R3(myin1)"
-          ((before ((myin0 (R1)) (myin1 (R3)))) (after ((myout0 (R1)))))))))
-      (input ((myin0 (R1)) (myin1 (R3)))) (output ((myout0 (R1)))) (moves ())))
+         ("R2(myout0) = Addo R2(myin0), R0(myin1)"
+          ((before ((myin0 (R2)) (myin1 (R0)))) (after ((myout0 (R2)))))))))
+      (input ((myin0 (R2)) (myin1 (R0)))) (output ((myout0 (R2)))) (moves ())))
 
     Liveness (graph):
     (((7
@@ -396,22 +396,21 @@ let%expect_test "spill" =
        ((before ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3))))
         (after ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3))))))
       ("R3 = Add R1, R2"
-       ((before ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3 SPILL))))
+       ((before ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (SPILL))))
         (after
          ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (SPILL)) (tmp1 (R3))))))
       ("R0 = Add R0, R3"
        ((before
-         ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3 SPILL))
-          (tmp1 (SPILL))))
+         ((myin0 (R1)) (myin1 (R2)) (myin2 (R0)) (myin3 (R3)) (tmp1 (SPILL))))
         (after ((myin0 (R1)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R0))))))
-      ("R2 = Add R1, R2"
+      ("R1 = Add R1, R2"
        ((before ((myin0 (R1)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R0))))
-        (after ((tmp1 (SPILL)) (tmp2 (R0)) (tmp3 (R2))))))
+        (after ((tmp1 (SPILL)) (tmp2 (R0)) (tmp3 (R1))))))
       ("R3 = Addo R3, R0"
-       ((before ((tmp1 (R3 SPILL)) (tmp2 (R0)) (tmp3 (R2))))
-        (after ((tmp3 (R2)) (tmp4 (R3))))))
-      ("R3 = Addo R3, R2"
-       ((before ((tmp3 (R2)) (tmp4 (R3)))) (after ((tmp5 (R3))))))
+       ((before ((tmp1 (R3)) (tmp2 (R0)) (tmp3 (R1))))
+        (after ((tmp3 (R1)) (tmp4 (R3))))))
+      ("R3 = Addo R3, R1"
+       ((before ((tmp3 (R1)) (tmp4 (R3)))) (after ((tmp5 (R3))))))
       ("R3 = Move R3" ((before ((tmp5 (R3)))) (after ((myout0 (R3))))))))
 
     Graph:
@@ -419,33 +418,34 @@ let%expect_test "spill" =
      ((instructions
        ((8
          (Nop
-          ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))
-           (after ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3)))))))
+          ((before ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3))))
+           (after ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3)))))))
         (9
-         ("R3(tmp1) = Add R0(myin0), R2(myin1)"
-          ((before ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3 SPILL))))
+         ("R3(tmp1) = Add R2(myin0), R0(myin1)"
+          ((before ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3 SPILL))))
            (after
-            ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (SPILL)) (tmp1 (R3)))))))
+            ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (SPILL)) (tmp1 (R3)))))))
         (10
          ("R1(tmp2) = Add R1(myin2), R3(myin3)"
           ((before
-            ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3)) (tmp1 (SPILL))))
-           (after ((myin0 (R0)) (myin1 (R2)) (tmp1 (SPILL)) (tmp2 (R1)))))))
+            ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3 SPILL))
+             (tmp1 (SPILL))))
+           (after ((myin0 (R2)) (myin1 (R0)) (tmp1 (SPILL)) (tmp2 (R1)))))))
         (11
-         ("R0(tmp3) = Add R0(myin0), R2(myin1)"
-          ((before ((myin0 (R0)) (myin1 (R2)) (tmp1 (R3 SPILL)) (tmp2 (R1))))
-           (after ((tmp1 (R3)) (tmp2 (R1)) (tmp3 (R0)))))))
+         ("R2(tmp3) = Add R2(myin0), R0(myin1)"
+          ((before ((myin0 (R2)) (myin1 (R0)) (tmp1 (R3 SPILL)) (tmp2 (R1))))
+           (after ((tmp1 (R3 SPILL)) (tmp2 (R1)) (tmp3 (R2)))))))
         (12
          ("R3(tmp4) = Addo R3(tmp1), R1(tmp2)"
-          ((before ((tmp1 (R3)) (tmp2 (R1)) (tmp3 (R0))))
-           (after ((tmp3 (R0)) (tmp4 (R3)))))))
+          ((before ((tmp1 (R3 SPILL)) (tmp2 (R1)) (tmp3 (R2))))
+           (after ((tmp3 (R2)) (tmp4 (R3)))))))
         (13
-         ("R3(tmp5) = Addo R3(tmp4), R0(tmp3)"
-          ((before ((tmp3 (R0)) (tmp4 (R3)))) (after ((tmp5 (R3)))))))
+         ("R3(tmp5) = Addo R3(tmp4), R2(tmp3)"
+          ((before ((tmp3 (R2)) (tmp4 (R3)))) (after ((tmp5 (R3)))))))
         (14
          ("R3(myout0) = Move R3(tmp5)"
           ((before ((tmp5 (R3)))) (after ((myout0 (R3)))))))))
-      (input ((myin0 (R0)) (myin1 (R2)) (myin2 (R1)) (myin3 (R3))))
+      (input ((myin0 (R2)) (myin1 (R0)) (myin2 (R1)) (myin3 (R3))))
       (output ((myout0 (R3))))
       (moves
        (((node_in (N 9)) (node_out (N 10))
@@ -562,17 +562,17 @@ let%expect_test "loop" =
     (Satisfiable
      ((instructions
        ((15
-         ("R3(tmp1) = Add R0(myin0), R1(myin1)"
-          ((before ((myin0 (R0)) (myin1 (R1))))
-           (after ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3)))))))
+         ("R1(tmp1) = Add R2(myin0), R3(myin1)"
+          ((before ((myin0 (R2)) (myin1 (R3))))
+           (after ((myin0 (R2)) (myin1 (R3)) (tmp1 (R1)))))))
         (16
-         ("R1(myin1) = Loop R1(myin1)"
-          ((before ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3))))
-           (after ((myin0 (R0)) (myin1 (R1)) (tmp1 (R3)))))))
+         ("R3(myin1) = Loop R3(myin1)"
+          ((before ((myin0 (R2)) (myin1 (R3)) (tmp1 (R1))))
+           (after ((myin0 (R2)) (myin1 (R3)) (tmp1 (R1)))))))
         (17
-         ("R3(myout0) = Add R3(tmp1), R0(myin0)"
-          ((before ((myin0 (R0)) (tmp1 (R3)))) (after ((myout0 (R3)))))))))
-      (input ((myin0 (R0)) (myin1 (R1)))) (output ((myout0 (R3)))) (moves ())))
+         ("R1(myout0) = Add R1(tmp1), R2(myin0)"
+          ((before ((myin0 (R2)) (tmp1 (R1)))) (after ((myout0 (R1)))))))))
+      (input ((myin0 (R2)) (myin1 (R3)))) (output ((myout0 (R1)))) (moves ())))
 
     Liveness (graph):
     (((15
