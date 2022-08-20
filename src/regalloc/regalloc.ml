@@ -1624,7 +1624,7 @@ module Make_allocator
     (* CR smuenzel: do we need this? *)
     (* When there are multiple paths to a node, force sources of inputs to only have a
        single location *)
-    if false
+    if true
     then begin
       Hashtbl.iter variable_states
         ~f:(fun { node; _ } -> 
