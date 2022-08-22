@@ -7,8 +7,51 @@ module Dmm = Dmm_intf
 module Node_id = Dmm.Node_id
 
 module Dvar = Dmm.Dvar
+module Dinst = Dmm.Dinst
 
-module Igraph_builder = Dmm.Igraph_builder
+module Igraph_builder : sig
+  type t
+
+  val next_id : t -> Node_id.t
+  val temp : t -> Cmm.machtype -> Dvar.t
+
+  val insert : t -> Node_id.t -> Dmm.Inst_args.t -> next:Node_id.t array -> unit
+
+  val insert_inst
+    :  t
+    -> Node_id.t
+    -> Dinst.t
+    -> inputs:Dvar.t array
+    -> output:Dvar.t option
+    -> output_type:Cmm.machtype
+    -> next:Node_id.t array
+    -> unit
+
+  val add_var : ?typ:Cmm.machtype -> t -> Dvar.t -> unit
+  val var_typ : t -> Dvar.t -> Cmm.machtype option
+  val var_typ_exn : t -> Dvar.t -> Cmm.machtype
+
+end = struct
+  type t
+
+  let next_id _ = assert false
+  let temp _ _ = assert false
+  let insert _ _ (_ : Dmm.Inst_args.t) ~next:_ = assert false
+  let add_var ?typ:_ _ _ = assert false
+  let var_typ _ _ = assert false
+  let var_typ_exn _ _ = assert false
+
+  let insert_inst
+    t node_id inst ~inputs ~output ~output_type ~next
+    =
+    Option.iter output ~f:(add_var t ~typ:output_type);
+    insert t node_id
+      { inst
+      ; inputs
+      ; output
+      }
+      ~next
+end
 
 module Id_maker : sig
   type t
@@ -35,6 +78,7 @@ end = struct
   let ignore = Fn.id
 end
 
+(*
 let rec create_moves
     (b : Igraph_builder.t)
     ~(source:Dvar.t list)
@@ -77,24 +121,65 @@ let rec create_moves
       ~destination:ds
       ~this_id:next_id
       ~fallthrough_id
+   l*)
 
 let rec transl
     (b : Igraph_builder.t)
     (cmm : Cmm.expression)
     ~(this_id:Node_id.t)
     ~(fallthrough_id:Node_id.t)
-    (exits : (Node_id.t * Dvar.t list) Int.Map.t)
+    (exits : (Node_id.t * (Dvar.t * Cmm.machtype) list) Int.Map.t)
     ~(result:Dvar.t option)
   =
   match cmm with
   | Cconst_int (int, _dbg) ->
-    Igraph_builder.insert b
+    let int = Nativeint.of_int_exn int in
+    Igraph_builder.insert_inst b
       this_id
-      { inst = Pure (I (Const int))
-      ; inputs = [||]
-      ; output = result
-      }
+      (Pure (I (Const int)))
+      ~inputs:[||]
+      ~output:result
+      ~output_type:Cmm.typ_int
       ~next:[| fallthrough_id |]
+  | Cconst_natint (int, _dbg) ->
+    Igraph_builder.insert_inst b
+      this_id
+      (Pure (I (Const int)))
+      ~inputs:[||]
+      ~output:result
+      ~output_type:Cmm.typ_int
+      ~next:[| fallthrough_id |]
+  | Cconst_symbol (s, _) ->
+    Igraph_builder.insert_inst b
+      this_id
+      (Pure (Symbol s))
+      ~inputs:[||]
+      ~output:result
+      ~output_type:Cmm.typ_int
+      ~next:[| fallthrough_id |]
+  | Cconst_float (f,_) ->
+    Igraph_builder.insert_inst b
+      this_id
+      (Pure (F (Const f)))
+      ~inputs:[||]
+      ~output:result
+      ~output_type:Cmm.typ_float
+      ~next:[| fallthrough_id |]
+  | Clet (var, bexpr, expr) ->
+    let expr_id = Igraph_builder.next_id b in
+    let var = Dvar.Var (Backend_var.With_provenance.var var) in
+    let destination =
+      [ var
+      , Igraph_builder.var_typ_exn b var
+      ]
+    in
+    transl_var_exprs b
+      ~source:[ bexpr ]
+      ~destination
+      ~this_id
+      ~fallthrough_id:expr_id
+      exits
+    ;
   | Cexit (exit_number, args) ->
     begin match Map.find exits exit_number with
       | None -> assert false
@@ -145,8 +230,9 @@ let rec transl
         ~f:(fun acc (exit_id, args, _expr, _dbg) ->
             let args =
               List.map args
-                ~f:(fun (v, _) ->
+                ~f:(fun (v, machtype) ->
                     Dvar.Var (Backend_var.With_provenance.var v)
+                  , machtype
                   )
             in
             Map.add_exn acc ~key:exit_id ~data:(Igraph_builder.next_id b, args)
@@ -177,7 +263,6 @@ let rec transl
         )
     ;
     ()
-  | _ -> ()
 and transl_test
     (b : Igraph_builder.t)
     (cmm : Cmm.expression)
@@ -189,7 +274,7 @@ and transl_test
 and transl_var_exprs
     (b : Igraph_builder.t)
     ~(source:Cmm.expression list)
-    ~(destination:Dvar.t list)
+    ~(destination:(Dvar.t * Cmm.machtype) list)
     ~(this_id:Node_id.t)
     ~(fallthrough_id:Node_id.t)
     exits
@@ -206,8 +291,9 @@ and transl_var_exprs
     ;
   | [], _ :: _ -> assert false
   | _ :: _, [] -> assert false
-  | s :: ss, d :: ds ->
+  | s :: ss, (d, dtyp) :: ds ->
     let next_id = Igraph_builder.next_id b in
+    Igraph_builder.add_var ~typ:dtyp b d;
     transl b
       ~this_id
       s

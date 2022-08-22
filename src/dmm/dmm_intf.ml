@@ -51,17 +51,18 @@ module Pure_op = struct
       | Lsr
       | Asr
       | Cmp of { signed : bool; comparison : Cmm.integer_comparison }
-      | Const of int
+      | Const of Nativeint.t
   end
 
   module Float = struct
-    type t
-
+    type t =
+      | Const of float
   end
 
   type t =
     | I of Integer.t
     | F of Float.t
+    | Symbol of string
 
 end
 
@@ -107,10 +108,24 @@ type t =
   ; next : Node_id.t array
   }
 
+module Backend_var = struct
+  include Backend_var
+  let hash_fold_t s t =
+    Hash.fold_int s (hash t)
+
+  let sexp_of_t t =
+    Sexp.Atom (Backend_var.unique_name t)
+end
+
 module Dvar = struct
-  type t =
-    | Temp of int
-    | Var of Backend_var.t
+  module T = struct
+    type t =
+      | Temp of int
+      | Var of Backend_var.t
+    [@@deriving hash, compare, sexp_of]
+  end
+  include T
+  include Hashable.Make_plain(T)
 
   let equal a b =
     match a, b with
@@ -128,19 +143,3 @@ module Inst_args = struct
     }
 end
 
-module Igraph_builder : sig
-  type t
-
-  val next_id : t -> Node_id.t
-  val temp : t -> Dvar.t
-
-  val insert : t -> Node_id.t -> Inst_args.t -> next:Node_id.t array -> unit
-
-end = struct
-  type t
-
-  let next_id _ = assert false
-  let temp _ = assert false
-  let insert _ _ _ ~next:_ = assert false
-
-end
