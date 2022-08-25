@@ -35,7 +35,9 @@ module Gen_expr = struct
 
   let t4_m3 ~f (a,b,c,d) = (a,b,f c,d)
 
-  let map ~f t =
+  let rec map : 'a 'b. f:(map:('a t -> 'b t) -> 'a -> 'b) -> 'a t -> 'b t =
+    fun (type a b) ~(f : map :(a t -> b t) -> a -> b) t ->
+    let f e = f ~map:(map ~f) e in
     match t with
     | Cconst_int (c,d) -> Cconst_int (c,d)
     | Cconst_natint (c,d) -> Cconst_natint (c,d)
@@ -44,7 +46,7 @@ module Gen_expr = struct
     | Cvar v -> Cvar v
     | Clet (v,e1,e2) -> Clet (v, f e1, f e2)
     | Clet_mut (v,m,e1,e2) -> Clet_mut (v,m,f e1,f e2)
-    | Cassign (v,e) -> Cassign (v,e)
+    | Cassign (v,e) -> Cassign (v,f e)
     | Ctuple list -> Ctuple (List.map ~f list)
     | Cop (o, list, d) -> Cop (o, List.map ~f list, d)
     | Csequence (e1, e2) -> Csequence (f e1, f e2)
@@ -148,11 +150,8 @@ module Env : sig
 
   val var : t -> Dvar.t -> Tcell.t
   val exit : t -> int -> Tcell.t
-  (*
-  val add_var : ?typ:Cmm.machtype -> t -> Dvar.t -> unit
-  val var_typ : t -> Dvar.t -> Cmm.machtype option
-  val var_typ_exn : t -> Dvar.t -> Cmm.machtype
-     *)
+
+  val all_vars : t -> (Dvar.t * Tcell.t) list
 
 end = struct
   type t =
@@ -168,30 +167,41 @@ end = struct
   let var t dvar =
     Hashtbl.find_or_add t.vars dvar ~default:Tcell.create_empty
 
+  let all_vars t =
+    Hashtbl.to_alist t.vars
+
   let exit t i =
     Hashtbl.find_or_add t.exits i ~default:Tcell.create_empty
+end
 
-  (*
-  let add_var ?typ t dvar =
-    match Hashtbl.find t dvar with
-    | None
-    | Some None ->
-      Hashtbl.set t ~key:dvar ~data:typ
-    | Some (Some current_typ) ->
-      begin match typ with
-        | None -> ()
-        | Some typ ->
-          if Array.equal Poly.equal current_typ typ
-          then ()
-          else raise_s
-              [%message "mismatched type"
-                  (dvar : Dvar.t)
-              ]
-      end
+module Renv : sig
+  type t
 
-  let var_typ t dvar = Hashtbl.find_exn t dvar
-  let var_typ_exn t dvar = Option.value_exn (var_typ t dvar)
-     *)
+  val of_env : Env.t -> t
+
+  val var_exn : t -> Dvar.t -> Cmm.machtype
+  val make_var_exn : t -> Dvar.t -> Cmm.machtype -> unit
+end = struct
+
+  type t =
+    { vars : Cmm.machtype Dvar.Table.t
+    }
+
+  let of_env env =
+    let vars =
+      Env.all_vars env
+      |> List.map
+        ~f:(Tuple2.map_snd
+              ~f:(fun tcell ->
+                  Option.value ~default:Cmm.typ_void (Tcell.t tcell)
+                )
+           )
+      |> Dvar.Table.of_alist_exn
+    in
+    { vars }
+
+  let var_exn t var = Hashtbl.find_exn t.vars var
+  let make_var_exn t var typ = Hashtbl.add_exn t.vars ~key:var ~data:typ
 end
 
 let array_map_reduce_exn ~f_map ~f_red ar =
@@ -253,7 +263,8 @@ let rec type_all ~env cmm : Texpr_cell.t =
         begin match memory_chunk with
           | Word_val -> Tcell.val_t ()
           | Single | Double -> Tcell.float ()
-          | _ -> Tcell.int ()
+          | Byte_unsigned | Byte_signed | Sixteen_unsigned | Sixteen_signed
+          | Thirtytwo_unsigned | Thirtytwo_signed | Word_int -> Tcell.int ()
         end
       | Calloc -> Tcell.val_t ()
       | Cstore (_c, _) -> Tcell.void ()
@@ -325,3 +336,26 @@ let rec type_all ~env cmm : Texpr_cell.t =
     Tcell.unify_exn t_body t_handler;
     let exn = Dvar.Var (Backend_var.With_provenance.var exn) in
     T (Ctrywith (body, exn, handler, dbg), t_body)
+
+let type_function ~fun_args cmm =
+  let env = Env.create () in
+  List.iter fun_args
+    ~f:(fun (v,t) ->
+        Tcell.unify_t_exn
+          (Env.var env (Var (Backend_var.With_provenance.var v)))
+          t
+      );
+  let f ~map (Texpr_cell.T (e, tcell)) =
+    let typ =
+      match Tcell.t tcell with
+      | Some typ -> typ
+      | None -> Cmm.typ_void
+    in
+    Texpr.T (map e, typ)
+  in
+  let app_f = f ~map:(Gen_expr.map ~f) in
+  type_all ~env cmm
+  |> app_f
+
+
+

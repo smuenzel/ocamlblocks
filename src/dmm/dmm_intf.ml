@@ -30,7 +30,7 @@ module Control_flow = struct
     | End
     | Return
     | Test_and_branch of Test.t
-    | Switch
+    | Switch of int array
     | Raise
     | Checkbound
 end
@@ -63,7 +63,7 @@ module Pure_op = struct
     | I of Integer.t
     | F of Float.t
     | Symbol of string
-
+    | Assemble_tuple
 end
 
 module Mem_op = struct
@@ -99,6 +99,15 @@ end = struct
   let zero = 0
   let of_int = Fn.id
   let to_int = Fn.id
+end
+
+module Trap_id = Unique_id.Int()
+
+module Trap_stack = struct
+  type t = Trap_id.t list
+
+  let add_fresh_trap t =
+    Trap_id.create () :: t
 end
 
 type t =
@@ -140,6 +149,7 @@ module Inst_args = struct
     { inst : Dinst.t
     ; inputs : Dvar.t array
     ; output : Dvar.t option
+    ; trap_stack : Trap_stack.t
     }
 end
 
