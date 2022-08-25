@@ -93,12 +93,12 @@ module Node_id : sig
   val of_int : int -> t
   val to_int : t -> int
 
+  val equal : t -> t -> bool
+
+  include Hashable.S_plain with type t := t
+
 end = struct
-  type t = int
-  let succ = succ
-  let zero = 0
-  let of_int = Fn.id
-  let to_int = Fn.id
+  include Int
 end
 
 module Trap_id = Unique_id.Int()
@@ -151,5 +151,16 @@ module Inst_args = struct
     ; output : Dvar.t option
     ; trap_stack : Trap_stack.t
     }
+end
+
+module Inst_notrap = struct
+  (* CR smuenzel: maybe [Inst.With_trap], [Inst] *)
+
+  type t =
+    { inst : Dinst.t
+    ; inputs : Dvar.t array
+    ; output : Dvar.t option
+    }
+
 end
 

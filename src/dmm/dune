@@ -1,6 +1,6 @@
 (library
   (name blocks_dmm)
-  (libraries core z3 z3i ocamlc_kit unionFind)
+  (libraries core z3 z3i ocamlc_kit unionFind ocamlgraph)
   (inline_tests)
   (preprocess (pps ppx_expect ppx_jane))
   )

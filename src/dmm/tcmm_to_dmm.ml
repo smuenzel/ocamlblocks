@@ -10,60 +10,6 @@ module Dvar = Dmm.Dvar
 module Dinst = Dmm.Dinst
 module Trap_stack = Dmm.Trap_stack
 
-module Igraph_builder : sig
-  type t
-
-  val next_id : t -> Node_id.t
-  val temp : t -> Cmm.machtype -> Dvar.t
-
-  val insert
-    :  t
-    -> Node_id.t
-    -> Dmm.Inst_args.t
-    -> next:Node_id.t array
-    -> unit
-
-  val insert_inst
-    :  t
-    -> Node_id.t
-    -> Dinst.t
-    -> inputs:Dvar.t array
-    -> output:Dvar.t option
-    -> output_type:Cmm.machtype
-    -> next:Node_id.t array
-    -> trap_stack:Trap_stack.t
-    -> unit
-
-  val var_exn : t -> Dvar.t -> Cmm.machtype
-  val make_var_exn : t -> Dvar.t -> Cmm.machtype -> unit
-
-end = struct
-  type t
-
-  let next_id _ = assert false
-  let temp _ _ = assert false
-  let insert _ _ (_ : Dmm.Inst_args.t) ~next:_ = assert false
-
-  let insert_inst
-    t node_id inst ~inputs ~output ~output_type ~next ~trap_stack
-    =
-    (*
-    Option.iter output ~f:(add_var t ~typ:output_type);
-       *)
-    insert t node_id
-      { inst
-      ; inputs
-      ; output
-      ; trap_stack
-      }
-      ~next
-
-  let renv _ = assert false
-
-  let var_exn t = Tcmm.Renv.var_exn (renv t)
-  let make_var_exn t = Tcmm.Renv.make_var_exn (renv t)
-end
-
 module Id_maker : sig
   type t
   val create : unit -> t
@@ -135,7 +81,7 @@ let rec create_moves
    l*)
 
 let rec transl
-    (b : Igraph_builder.t)
+    (b : Dmm.Inst_args.t Igraph_builder.t)
     (cmm : Tcmm.Texpr.t)
     ~(this_id:Node_id.t)
     ~(fallthrough_id:Node_id.t)
@@ -144,54 +90,49 @@ let rec transl
     ~(result:Dvar.t option)
   =
   match cmm with
-  | T (Cconst_int (int, _dbg), output_type) ->
+  | T (Cconst_int (int, _dbg), _output_type) ->
     let int = Nativeint.of_int_exn int in
-    Igraph_builder.insert_inst b
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       this_id
-      (Pure (I (Const int)))
-      ~inputs:[||]
-      ~output:result
-      ~output_type
-      ~next:[| fallthrough_id |]
-      ~trap_stack
-  | T (Cconst_natint (int, _dbg), output_type) ->
-    Igraph_builder.insert_inst b
+      { inst = Pure (I (Const int))
+      ; inputs = [||]
+      ; output = result
+      ; trap_stack
+      }
+  | T (Cconst_natint (int, _dbg), _output_type) ->
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       this_id
-      (Pure (I (Const int)))
-      ~inputs:[||]
-      ~output:result
-      ~output_type
-      ~next:[| fallthrough_id |]
-      ~trap_stack
-  | T (Cconst_float (f,_), output_type) ->
-    Igraph_builder.insert_inst b
+      { inst = Pure (I (Const int))
+      ; inputs = [||]
+      ; output = result
+      ; trap_stack
+      }
+  | T (Cconst_float (f,_), _output_type) ->
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       this_id
-      (Pure (F (Const f)))
-      ~inputs:[||]
-      ~output:result
-      ~output_type
-      ~next:[| fallthrough_id |]
-      ~trap_stack
-  | T (Cconst_symbol (s, _), output_type) ->
-    Igraph_builder.insert_inst b
+      { inst = Pure (F (Const f))
+      ; inputs = [||]
+      ; output = result
+      ; trap_stack
+      }
+  | T (Cconst_symbol (s, _), _output_type) ->
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       this_id
-      (Pure (Symbol s))
-      ~inputs:[||]
-      ~output:result
-      ~output_type
-      ~next:[| fallthrough_id |]
-      ~trap_stack
-  | T (Cvar v, output_type) ->
-    Igraph_builder.insert_inst b
+      { inst = Pure (Symbol s)
+      ; inputs = [||]
+      ; output = result
+      ; trap_stack
+      }
+  | T (Cvar v, _output_type) ->
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       this_id
-      Move
-      ~inputs:[| v |]
-      ~output:result
-      ~output_type
-      ~next:[| fallthrough_id |]
-      ~trap_stack
-  | T (Clet (var, (T (_, bexpr_t) as bexpr), expr), output_type)
-  | T (Clet_mut (var, bexpr_t, bexpr, expr), output_type) ->
+      { inst = Move
+      ; inputs = [| v |]
+      ; output = result
+      ; trap_stack
+      }
+  | T (Clet (var, (T (_, bexpr_t) as bexpr), expr), _output_type)
+  | T (Clet_mut (var, bexpr_t, bexpr, expr), _output_type) ->
     let expr_id = Igraph_builder.next_id b in
     let destination = [ var, bexpr_t ] in
     transl_var_exprs b
@@ -224,7 +165,7 @@ let rec transl
       ; output = None
       ; trap_stack
       }
-  | T (Ctuple exprs, output_type) ->
+  | T (Ctuple exprs, _output_type) ->
     let destination =
       List.map exprs
         ~f:(fun (T (_,typ)) ->
@@ -240,14 +181,13 @@ let rec transl
       exits
       ~trap_stack
     ;
-    Igraph_builder.insert_inst b
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
       combine_id
-      (Pure Assemble_tuple)
-      ~inputs:(List.map ~f:fst destination |> Array.of_list)
-      ~output:result
-      ~output_type:(List.map ~f:snd destination |> Array.concat)
-      ~next:[| fallthrough_id |]
-      ~trap_stack
+      { inst = Pure Assemble_tuple
+      ; inputs = List.map ~f:fst destination |> Array.of_list
+      ; output = result
+      ; trap_stack
+      }
   | T (Csequence (expr_a, expr_b), _typ) ->
     let first_id = Igraph_builder.next_id b in
     let second_id = Igraph_builder.next_id b in
@@ -264,6 +204,7 @@ let rec transl
         ~this_id
         ~cond_id
         exits
+        ~trap_stack
     in
     let ifso_id = Igraph_builder.next_id b in
     let ifnot_id = Igraph_builder.next_id b in
@@ -277,7 +218,7 @@ let rec transl
       ; trap_stack
       }
       ~next:[| ifso_id; ifnot_id |]
-  | T (Cswitch (discriminator, indices, targets, _dbg), typ) ->
+  | T (Cswitch (discriminator, indices, targets, _dbg), _typ) ->
     let target_ids =
       Array.map targets
         ~f:(fun (cmm, _dbg) ->
@@ -320,7 +261,7 @@ let rec transl
       | Nonrecursive -> exits
     in
     List.iter catches
-      ~f:(fun (exit_id, args, expr, _dbg) ->
+      ~f:(fun (exit_id, _args, expr, _dbg) ->
           let this_id =
             fst (Map.find_exn catches_map exit_id)
           in
@@ -348,39 +289,44 @@ let rec transl
           exits
           ~trap_stack
     end
-  | T (Ctrywith (body, exn, handler, _dbg) , _) ->
+  | T (Ctrywith (body, _exn, handler, _dbg) , _) ->
     let new_trap_stack = Trap_stack.add_fresh_trap trap_stack in
     transl b body ~this_id ~fallthrough_id exits ~trap_stack:new_trap_stack ~result;
     let pre_handler_id = Igraph_builder.next_id b in
     let handler_id = Igraph_builder.next_id b in
     (* Insert Nop so that the Poptrap happens in the handler *)
-    Igraph_builder.insert_inst
-      b
+    Igraph_builder.insert b ~next:[| handler_id |]
       pre_handler_id
-      Nop
-      ~inputs:[||]
-      ~output:None
-      ~output_type:Cmm.typ_void
-      ~next:[| handler_id |]
-      ~trap_stack:new_trap_stack
+      { inst = Nop
+      ; inputs = [||]
+      ; output = None
+      ; trap_stack = new_trap_stack
+      }
     ;
     transl b handler ~this_id:handler_id ~fallthrough_id exits ~trap_stack ~result;
     ()
 and transl_test
-    (b : Igraph_builder.t)
-    (cmm : Cmm.expression)
+    (b : _ Igraph_builder.t)
+    (cmm : Tcmm.Texpr.t)
     ~(this_id:Node_id.t)
     ~(cond_id:Node_id.t)
     exits
+    ~trap_stack
   =
-  assert false
+  (* CR smuenzel: This should expand complex tests in a target-specific way *)
+  let test_result = Igraph_builder.temp b Cmm.typ_int in
+  transl b cmm ~this_id ~fallthrough_id:cond_id exits ~trap_stack
+    ~result:(Some test_result)
+  ;
+  Dmm_intf.Test.Bool { then_value = true }, [| test_result |]
 and transl_var_exprs
-    (b : Igraph_builder.t)
-    ~(source:Cmm.expression list)
+    (b : _ Igraph_builder.t)
+    ~(source:Tcmm.Texpr.t list)
     ~(destination:(Dvar.t * Cmm.machtype) list)
     ~(this_id:Node_id.t)
     ~(fallthrough_id:Node_id.t)
     exits
+    ~trap_stack
   =
   match source, destination with
   | [], [] ->
@@ -390,19 +336,20 @@ and transl_var_exprs
       { inst = Nop
       ; inputs = [||]
       ; output = None
+      ; trap_stack
       }
     ;
   | [], _ :: _ -> assert false
   | _ :: _, [] -> assert false
-  | s :: ss, (d, dtyp) :: ds ->
+  | s :: ss, (d, _dtyp) :: ds ->
     let next_id = Igraph_builder.next_id b in
-    Igraph_builder.add_var ~typ:dtyp b d;
     transl b
       ~this_id
       s
       ~fallthrough_id:next_id
       ~result:(Some d)
       exits
+      ~trap_stack
     ;
     transl_var_exprs
       b
@@ -411,6 +358,7 @@ and transl_var_exprs
       ~this_id:next_id
       ~fallthrough_id
       exits
+      ~trap_stack
 
 
 
