@@ -1,0 +1,6 @@
+(library
+  (name blocks_dmm_test)
+  (libraries core ocamlc_kit blocks_dmm)
+  (inline_tests)
+  (preprocess (pps ppx_expect ppx_jane))
+  )
