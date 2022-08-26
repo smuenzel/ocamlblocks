@@ -117,20 +117,23 @@ let%expect_test "" =
         (Val)))
       (Val))
      ((Cconst_int 1) (Int))) |}];
-  List.map tcmm
-    ~f:(fun tcmm ->
-        let graph = Igraph_builder.create () in
-        Tcmm_to_dmm.transl
+  let graphs =
+    List.map tcmm
+      ~f:(fun tcmm ->
+          let graph = Igraph_builder.create () in
+          Tcmm_to_dmm.transl
+            graph
+            tcmm
+            ~this_id:(Igraph_builder.enter_id graph)
+            ~fallthrough_id:(Igraph_builder.exit_id graph)
+            Int.Map.empty
+            ~trap_stack:[]
+            ~result:None
+          ;
           graph
-          tcmm
-          ~this_id:(Igraph_builder.enter_id graph)
-          ~fallthrough_id:(Igraph_builder.exit_id graph)
-          Int.Map.empty
-          ~trap_stack:[]
-          ~result:None
-        ;
-        graph
-      )
+        )
+  in
+  graphs
   |> [%sexp_of: Dmm_intf.Inst_args.t Igraph_builder.t list]
   |> print_s
   ;
@@ -241,4 +244,195 @@ let%expect_test "" =
       (raise_id 1) (temp_vars)
       (graph
        (((node_id 2) (next (0))
-         (c ((inst (Pure (I (Const 1)))) (inputs) (output) (trap_stack)))))))) |}]
+         (c ((inst (Pure (I (Const 1)))) (inputs) (output) (trap_stack)))))))) |}];
+  List.iter graphs
+    ~f:(fun g ->
+      Igraph_builder.to_dot g
+        ~f:(fun x ->
+            let f = Format.str_formatter in
+            Format.pp_set_margin f 20;
+            Sexp.pp_hum f ([%sexp_of: Dmm_intf.Dinst.t] x.inst);
+            Format.flush_str_formatter ()
+            |> String.substr_replace_all ~pattern:"\n" ~with_:"\\n"
+          )
+      |> Compile_helper.run_graph_easy
+      |> print_endline
+    );
+  [%expect {|
+                            ┌─────────────────────┐
+                            │        Move         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │        (Pure        │
+                            │   (I (Const 1)))    │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │         Nop         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │        (Pure        │
+                            │         (I          │
+                            │        (Cmp         │
+                            │    (signed true)    │
+                            │ (comparison Cne)))) │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │                 │     │        (Flow        │
+    │      (Pure      │     │  (Test_and_branch   │
+    │ (I (Const 1)))  │     │        (Bool        │
+    │                 │     │     (then_value     │
+    │                 │ ◀── │      true))))       │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │      Move       │     │        Move         │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │      (Pure      │     │        (Pure        │
+    │ (I (Const -2))) │     │   (I (Const 3)))    │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │       Nop       │     │         Nop         │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │                 │     │        (Pure        │
+    │                 │     │         (I          │
+    │ (Pure (I Add))  │     │        (Cmp         │
+    │                 │     │    (signed true)    │
+    │                 │     │ (comparison Cne)))) │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐     ┌──────────────────────────┐
+    │                 │     │        (Flow        │     │                          │
+    │                 │     │  (Test_and_branch   │     │                          │
+    │       Nop       │     │        (Bool        │     │           Nop            │
+    │                 │     │     (then_value     │     │                          │
+    │                 │     │      true))))       │ ──▶ │                          │
+    └─────────────────┘     └─────────────────────┘     └──────────────────────────┘
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           ▼
+      │                     ┌─────────────────────┐     ┌──────────────────────────┐
+      │                     │                     │     │          (Call           │
+      │                     │        (Pure        │     │     (Call_immediate      │
+      │                     │  (I (Const 245)))   │     │          (func           │
+      │                     │                     │     │ camlTest__Pmakeblock_46) │
+      │                     │                     │     │      (tail true)))       │
+      │                     └─────────────────────┘     └──────────────────────────┘
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           │
+      │                     ┌─────────────────────┐       │
+      │                     │        (Pure        │       │
+      │                     │   (I (Const 1)))    │       │
+      │                     └─────────────────────┘       │
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           │
+      │                     ┌─────────────────────┐       │
+      │                     │         Nop         │       │
+      │                     └─────────────────────┘       │
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           │
+      │                     ┌─────────────────────┐       │
+      │                     │        (Pure        │       │
+      └───────────────────▶ │  (I (Const 1024)))  │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │        Move         │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │        Move         │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │         Nop         │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │   (Pure (I Add))    │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │        (Pure        │       │
+                            │   (I (Const -1)))   │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │         Nop         │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │   (Pure (I Add))    │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │         Nop         │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │     (Mem Alloc)     │       │
+                            └─────────────────────┘       │
+                              │                           │
+                              │                           │
+                              ▼                           │
+                            ┌─────────────────────┐       │
+                            │          0          │ ◀─────┘
+                            └─────────────────────┘
+
+    ┌────────────────┐
+    │     (Pure      │
+    │ (I (Const 1))) │
+    └────────────────┘
+      │
+      │
+      ▼
+    ┌────────────────┐
+    │       0        │
+    └────────────────┘ |}]

@@ -70,6 +70,22 @@ let sexp_of_t
     ; graph : Sexp.t list
     }]
 
+let to_dot { nodes; _ } ~f =
+  let b = Buffer.create 1000 in
+  Buffer.add_string b "digraph igraph {\n";
+  Hashtbl.iteri nodes
+    ~f:(fun ~key ~data:{ Node. contents; next } ->
+        Printf.sprintf "%i [ label = \"%s\"];\n" (Node_id.to_int key) (f contents)
+        |> Buffer.add_string b;
+        Array.iter next
+          ~f:(fun next ->
+              Printf.sprintf "%i -> %i;\n" (Node_id.to_int key) (Node_id.to_int next)
+              |> Buffer.add_string b
+            )
+      )
+  ;
+  Buffer.add_string b "}\n";
+  Buffer.contents b
 
 let next_id (t : _ t) =
   let result = t.current_node_id in
