@@ -14,12 +14,62 @@ type 'a t =
   { mutable current_node_id : Node_id.t 
   ; mutable current_var_id : int
   ; nodes : 'a Node_id.Table.t
-  ; graph : G.t
+  ; graph : (G.t [@sexp.opaque])
   ; enter_id : Node_id.t
   ; exit_id : Node_id.t
   ; raise_id : Node_id.t
   ; temp_vars : Cmm.machtype Dvar.Table.t
   } [@@deriving fields]
+
+let sexp_of_t
+    sexp_of_a
+    { current_node_id
+    ; current_var_id
+    ; nodes
+    ; graph
+    ; enter_id
+    ; exit_id
+    ; raise_id
+    ; temp_vars
+    }
+  =
+  let module Top = Graph.Topological.Make(G) in
+  let graph =
+    Top.fold
+      (fun node_id acc ->
+         if Node_id.equal node_id exit_id
+         || Node_id.equal node_id raise_id
+         then acc
+         else begin
+           let c = Hashtbl.find_exn nodes node_id in
+           let next =
+             G.fold_succ
+               (fun succ acc -> succ :: acc)
+               graph
+               node_id
+               []
+           in
+           [%sexp
+             { node_id : Node_id.t
+             ; next : Node_id.t list
+             ; c : a 
+             }] :: acc
+         end
+      )
+      graph
+      []
+  in
+  let graph = List.rev graph in
+  [%sexp
+    { current_node_id : Node_id.t 
+    ; current_var_id : int
+    ; enter_id : Node_id.t
+    ; exit_id : Node_id.t
+    ; raise_id : Node_id.t
+    ; temp_vars : Cmm.machtype Dvar.Table.t
+    ; graph : Sexp.t list
+    }]
+
 
 let next_id (t : _ t) =
   let result = t.current_node_id in
@@ -41,3 +91,25 @@ let temp t machtype =
 let map t ~f =
   let nodes = Hashtbl.map ~f t.nodes in
   { t with nodes }
+
+let create
+  ()
+  =
+  let exit_id = Node_id.zero in
+  let raise_id = Node_id.succ exit_id in
+  let enter_id = Node_id.succ raise_id in
+  let current_node_id = Node_id.succ enter_id in
+  let current_var_id = 0 in
+  let nodes = Node_id.Table.create () in
+  let graph = G.create () in
+  let temp_vars = Dvar.Table.create () in
+  { current_node_id
+  ; current_var_id
+  ; nodes
+  ; graph
+  ; enter_id
+  ; exit_id
+  ; raise_id
+  ; temp_vars
+  }
+

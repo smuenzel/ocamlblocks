@@ -110,7 +110,7 @@ module Dinst = struct
 end
 
 module Node_id : sig
-  type t [@@immediate]
+  type t [@@immediate] [@@deriving sexp_of]
 
   val zero : t
   val succ : t -> t
