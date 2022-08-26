@@ -154,7 +154,7 @@ let%expect_test "" =
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Cne)))))
            (inputs ((Temp 1) (Temp 2))) (output ((Temp 0))) (trap_stack))))
-        ((node_id 4) (next (9 8))
+        ((node_id 4) (next (8 9))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 0))) (output) (trap_stack))))
@@ -185,7 +185,7 @@ let%expect_test "" =
          (c
           ((inst (Pure (I Add))) (inputs ((Temp 6) (Temp 7)))
            (output ((Var y_47))) (trap_stack))))
-        ((node_id 10) (next (15 14))
+        ((node_id 10) (next (14 15))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 3))) (output) (trap_stack))))

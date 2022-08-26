@@ -10,10 +10,17 @@ module Node_id = Dmm.Node_id
 
 module G = Graph.Imperative.Digraph.ConcreteBidirectional(Node_id)
 
+module Node = struct
+  type 'a t =
+    { contents : 'a
+    ; next : Node_id.t array
+    }
+end
+
 type 'a t =
   { mutable current_node_id : Node_id.t 
   ; mutable current_var_id : int
-  ; nodes : 'a Node_id.Table.t
+  ; nodes : 'a Node.t Node_id.Table.t
   ; graph : (G.t [@sexp.opaque])
   ; enter_id : Node_id.t
   ; exit_id : Node_id.t
@@ -41,17 +48,10 @@ let sexp_of_t
          || Node_id.equal node_id raise_id
          then acc
          else begin
-           let c = Hashtbl.find_exn nodes node_id in
-           let next =
-             G.fold_succ
-               (fun succ acc -> succ :: acc)
-               graph
-               node_id
-               []
-           in
+           let { Node. contents = c ; next } = Hashtbl.find_exn nodes node_id in
            [%sexp
              { node_id : Node_id.t
-             ; next : Node_id.t list
+             ; next : Node_id.t array
              ; c : a 
              }] :: acc
          end
@@ -77,7 +77,13 @@ let next_id (t : _ t) =
   result
 
 let insert t node_id value ~next =
-  Hashtbl.add_exn t.nodes ~key:node_id ~data:value;
+  let node =
+    { Node.
+      contents = value
+    ; next
+    }
+  in
+  Hashtbl.add_exn t.nodes ~key:node_id ~data:node;
   G.add_vertex t.graph node_id;
   Array.iter next ~f:(G.add_edge t.graph node_id)
 
