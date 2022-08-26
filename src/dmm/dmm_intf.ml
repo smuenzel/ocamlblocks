@@ -128,10 +128,15 @@ end
 module Trap_id = Unique_id.Int()
 
 module Trap_stack = struct
-  type t = Trap_id.t list [@@deriving sexp_of]
+  module T = struct
+    type t = Trap_id.t list [@@deriving sexp_of, compare]
+  end
+  include T
+  include Comparable.Make_plain(T)
 
   let add_fresh_trap t =
     Trap_id.create () :: t
+
 end
 
 type t =

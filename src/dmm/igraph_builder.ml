@@ -70,7 +70,7 @@ let sexp_of_t
     ; graph : Sexp.t list
     }]
 
-let to_dot { nodes; _ } ~f =
+let to_dot { nodes; exit_id; raise_id; _ } ~f =
   let b = Buffer.create 1000 in
   Buffer.add_string b "digraph igraph {\n";
   Hashtbl.iteri nodes
@@ -84,6 +84,8 @@ let to_dot { nodes; _ } ~f =
             )
       )
   ;
+  Buffer.add_string b (Printf.sprintf "%i [ label = \"<EXIT>\"]\n"  (Node_id.to_int exit_id));
+  Buffer.add_string b (Printf.sprintf "%i [ label = \"<RAISE>\"]\n"  (Node_id.to_int raise_id));
   Buffer.add_string b "}\n";
   Buffer.contents b
 

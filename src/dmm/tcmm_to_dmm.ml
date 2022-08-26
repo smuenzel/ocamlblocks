@@ -87,6 +87,7 @@ let rec transl
     ~(fallthrough_id:Node_id.t)
     (exits : (Node_id.t * (Dvar.t * Cmm.machtype) list) Int.Map.t)
     ~trap_stack
+    ~(trap_handlers: Node_id.t Trap_stack.Map.t)
     ~(result:Dvar.t option)
   =
   match cmm with
@@ -142,6 +143,7 @@ let rec transl
       ~fallthrough_id:expr_id
       exits
       ~trap_stack
+      ~trap_handlers
     ;
     transl b expr
       ~this_id:expr_id
@@ -149,6 +151,7 @@ let rec transl
       exits
       ~result
       ~trap_stack
+      ~trap_handlers
   | T (Cassign (v, expr), _output_type) ->
     transl b expr
       ~this_id
@@ -156,6 +159,7 @@ let rec transl
       exits
       ~result:(Some v)
       ~trap_stack
+      ~trap_handlers
   | T (Ctuple [], _) ->
     Igraph_builder.insert b
       this_id
@@ -180,6 +184,7 @@ let rec transl
       ~fallthrough_id:combine_id
       exits
       ~trap_stack
+      ~trap_handlers
     ;
     Igraph_builder.insert b ~next:[| fallthrough_id |]
       combine_id
@@ -192,8 +197,13 @@ let rec transl
     let first_id = Igraph_builder.next_id b in
     let second_id = Igraph_builder.next_id b in
     transl
-      b expr_a ~this_id:first_id ~fallthrough_id:second_id exits ~result:None ~trap_stack;
-    transl b expr_b ~this_id:second_id ~fallthrough_id exits ~result ~trap_stack;
+      b expr_a ~this_id:first_id ~fallthrough_id:second_id exits ~result:None
+      ~trap_stack
+      ~trap_handlers
+    ;
+    transl b expr_b ~this_id:second_id ~fallthrough_id exits ~result ~trap_stack
+      ~trap_handlers
+    ;
     ()
   | T (Cifthenelse (discriminator, _ , ifso, _, ifnot, _), _) ->
     let cond_id = Igraph_builder.next_id b in
@@ -205,11 +215,12 @@ let rec transl
         ~cond_id
         exits
         ~trap_stack
+        ~trap_handlers
     in
     let ifso_id = Igraph_builder.next_id b in
     let ifnot_id = Igraph_builder.next_id b in
-    transl b ifso ~this_id:ifso_id ~fallthrough_id exits ~result ~trap_stack;
-    transl b ifnot ~this_id:ifnot_id ~fallthrough_id exits ~result ~trap_stack;
+    transl b ifso ~this_id:ifso_id ~fallthrough_id exits ~result ~trap_stack ~trap_handlers;
+    transl b ifnot ~this_id:ifnot_id ~fallthrough_id exits ~result ~trap_stack ~trap_handlers;
     Igraph_builder.insert b
       cond_id
       { inst = Flow (Test_and_branch test)
@@ -223,7 +234,7 @@ let rec transl
       Array.map targets
         ~f:(fun (cmm, _dbg) ->
             let id = Igraph_builder.next_id b in
-            transl b cmm ~this_id:id ~fallthrough_id exits ~result ~trap_stack;
+            transl b cmm ~this_id:id ~fallthrough_id exits ~result ~trap_stack ~trap_handlers;
             id
           )
     in
@@ -232,7 +243,7 @@ let rec transl
     let switcher_id = Igraph_builder.next_id b in
     transl
       b discriminator ~this_id ~fallthrough_id:switcher_id 
-      exits ~result:(Some switcher) ~trap_stack
+      exits ~result:(Some switcher) ~trap_stack ~trap_handlers
     ;
     Igraph_builder.insert b
       this_id
@@ -254,7 +265,7 @@ let rec transl
       Map.merge_skewed exits catches_map
         ~combine:(fun ~key:_ _ _ -> assert false)
     in
-    transl b expr ~this_id ~fallthrough_id all_exits ~result ~trap_stack;
+    transl b expr ~this_id ~fallthrough_id all_exits ~result ~trap_stack ~trap_handlers;
     let exit_rec =
       match rec_flag with
       | Recursive -> all_exits
@@ -273,6 +284,7 @@ let rec transl
             exit_rec
             ~result
             ~trap_stack
+            ~trap_handlers
         )
     ;
     ()
@@ -288,6 +300,7 @@ let rec transl
           ~fallthrough_id:exit_destination
           exits
           ~trap_stack
+          ~trap_handlers
     end
   | T (Ctrywith (body, _exn, handler, _dbg) , _) ->
     let new_trap_stack = Trap_stack.add_fresh_trap trap_stack in
@@ -308,6 +321,7 @@ let rec transl
       exits
       ~trap_stack:new_trap_stack
       ~result
+      ~trap_handlers
     ;
     let pre_handler_id = Igraph_builder.next_id b in
     let handler_id = Igraph_builder.next_id b in
@@ -320,9 +334,12 @@ let rec transl
       ; trap_stack = new_trap_stack
       }
     ;
-    transl b handler ~this_id:handler_id ~fallthrough_id exits ~trap_stack ~result;
+    let trap_handlers =
+      Map.add_exn trap_handlers ~key:new_trap_stack ~data:pre_handler_id
+    in
+    transl b handler ~this_id:handler_id ~fallthrough_id exits ~trap_stack ~result ~trap_handlers;
     ()
-  | T (Cop (_op, T (Cconst_symbol (func, _dbg), _) :: expr ,_),_) ->
+  | T (Cop (Capply _, T (Cconst_symbol (func, _dbg), _) :: expr ,_),_) ->
     (* CR smuenzel: a little hacky to match on arguments, should be done in an earlier
        translation *)
     let op_start_id = Igraph_builder.next_id b in
@@ -334,6 +351,7 @@ let rec transl
         ~fallthrough_id:op_start_id
         exits
         ~trap_stack
+        ~trap_handlers
       |> Array.of_list
     in
     let tail =
@@ -359,6 +377,7 @@ let rec transl
         ~fallthrough_id:op_start_id
         exits
         ~trap_stack
+        ~trap_handlers
       |> Array.of_list
     in
     transl_op
@@ -368,6 +387,7 @@ let rec transl
       ~this_id:op_start_id
       ~fallthrough_id
       ~trap_stack
+      ~trap_handlers
       ~result
     ;
     ()
@@ -379,12 +399,18 @@ and transl_op
     ~(this_id:Node_id.t)
     ~(fallthrough_id:Node_id.t)
     ~trap_stack
+    ~trap_handlers
     ~result
   =
   let dmm_op, next =
     match cmm with
     | Craise kind ->
-      Dmm.Dinst.Flow (Raise kind), Some (Igraph_builder.raise_id b)
+      let next =
+        match Map.find trap_handlers trap_stack with
+        | None -> Some (Igraph_builder.raise_id b)
+        | Some _ as handler -> handler
+      in
+      Dmm.Dinst.Flow (Raise kind), next
     | Capply _ ->
       let tail =
         (* CR smuenzel: this means we can't insert no-ops after *)
@@ -471,11 +497,12 @@ and transl_test
     ~(cond_id:Node_id.t)
     exits
     ~trap_stack
+    ~trap_handlers
   =
   (* CR smuenzel: This should expand complex tests in a target-specific way *)
   let test_result = Igraph_builder.temp b Cmm.typ_int in
   transl b cmm ~this_id ~fallthrough_id:cond_id exits ~trap_stack
-    ~result:(Some test_result)
+    ~result:(Some test_result) ~trap_handlers
   ;
   Dmm_intf.Test.Bool { then_value = true }, [| test_result |]
 
@@ -487,6 +514,7 @@ and transl_var_exprs
     ~(fallthrough_id:Node_id.t)
     exits
     ~trap_stack
+    ~trap_handlers
   =
   match source, destination with
   | [], [] ->
@@ -510,6 +538,7 @@ and transl_var_exprs
       ~result:(Some d)
       exits
       ~trap_stack
+      ~trap_handlers
     ;
     transl_var_exprs
       b
@@ -519,6 +548,7 @@ and transl_var_exprs
       ~fallthrough_id
       exits
       ~trap_stack
+      ~trap_handlers
 
 and transl_var_exprs_fresh_destination
     (b : _ Igraph_builder.t)
@@ -527,6 +557,7 @@ and transl_var_exprs_fresh_destination
     ~(fallthrough_id:Node_id.t)
     exits
     ~trap_stack
+    ~trap_handlers
   =
   match source with
   | [] ->
@@ -552,6 +583,7 @@ and transl_var_exprs_fresh_destination
         ~fallthrough_id
         exits
         ~trap_stack
+        ~trap_handlers
   | (T (_, dtyp) as s) :: ss ->
     let next_id = Igraph_builder.next_id b in
     let v = Igraph_builder.temp b dtyp in
@@ -562,6 +594,7 @@ and transl_var_exprs_fresh_destination
       ~result:(Some v)
       exits
       ~trap_stack
+      ~trap_handlers
     ;
     v ::
     transl_var_exprs_fresh_destination
@@ -571,6 +604,7 @@ and transl_var_exprs_fresh_destination
       ~fallthrough_id
       exits
       ~trap_stack
+      ~trap_handlers
 
 
 
