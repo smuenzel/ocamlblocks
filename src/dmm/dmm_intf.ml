@@ -1,6 +1,7 @@
 open Core
 
 module Cmm = Ocamlc_kit.Cmm
+module Asttypes = Ocamlc_kit.Asttypes
 
 module Call = struct
   type t =
@@ -9,10 +10,9 @@ module Call = struct
     | Call_indirect of { tail : bool }
     | Call_ext of 
         { func : string
-        ; res : Cmm.machtype
-        ; args : Cmm.exttype array
+        ; ty_res : Cmm.machtype
+        ; ty_args : Cmm.exttype array
         ; alloc : bool
-        ; stack_ofs : int
         }
 
 end
@@ -31,7 +31,7 @@ module Control_flow = struct
     | Return
     | Test_and_branch of Test.t
     | Switch of int array
-    | Raise
+    | Raise of Lambda.raise_kind
     | Checkbound
 end
 
@@ -56,6 +56,15 @@ module Pure_op = struct
 
   module Float = struct
     type t =
+      | Neg
+      | Abs
+      | Add
+      | Sub
+      | Mul
+      | Div
+      | Of_int
+      | To_int
+      | Cmp of Cmm.float_comparison
       | Const of float
   end
 
@@ -68,9 +77,17 @@ end
 
 module Mem_op = struct
   type t =
-    | Load
-    | Store
+    | Load of
+        { memory_chunk: Cmm.memory_chunk
+        ; mutability: Asttypes.mutable_flag
+        ; is_atomic: bool
+        }
+    | Store of
+        { memory_chunk : Cmm.memory_chunk
+        ; init : Lambda.initialization_or_assignment
+        }
     | Alloc
+    | Dls_get
 end
 
 module Dinst = struct

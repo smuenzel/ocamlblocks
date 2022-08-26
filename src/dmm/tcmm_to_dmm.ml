@@ -291,7 +291,24 @@ let rec transl
     end
   | T (Ctrywith (body, _exn, handler, _dbg) , _) ->
     let new_trap_stack = Trap_stack.add_fresh_trap trap_stack in
-    transl b body ~this_id ~fallthrough_id exits ~trap_stack:new_trap_stack ~result;
+    let trap_adjust_id = Igraph_builder.next_id b in
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
+      trap_adjust_id
+      { inst = Nop
+      ; inputs = [||]
+      ; output = None
+      ; trap_stack
+      }
+    ;
+    transl
+      b
+      body
+      ~this_id
+      ~fallthrough_id:trap_adjust_id
+      exits
+      ~trap_stack:new_trap_stack
+      ~result
+    ;
     let pre_handler_id = Igraph_builder.next_id b in
     let handler_id = Igraph_builder.next_id b in
     (* Insert Nop so that the Poptrap happens in the handler *)
@@ -305,6 +322,156 @@ let rec transl
     ;
     transl b handler ~this_id:handler_id ~fallthrough_id exits ~trap_stack ~result;
     ()
+  | T (Cop (_op, T (Cconst_symbol (func, _dbg), _) :: expr ,_),_) ->
+    (* CR smuenzel: a little hacky to match on arguments, should be done in an earlier
+       translation *)
+    let op_start_id = Igraph_builder.next_id b in
+    let destination =
+      List.map expr
+        ~f:(fun (T (_, dtyp)) -> Igraph_builder.temp b dtyp, dtyp)
+    in
+    transl_var_exprs
+      b
+      ~source:expr
+      ~destination
+      ~this_id
+      ~fallthrough_id:op_start_id
+      exits
+      ~trap_stack
+    ;
+    let inputs = Array.of_list_map ~f:fst destination in
+    let tail =
+      (* CR smuenzel: this means we can't insert no-ops after *)
+      Node_id.equal fallthrough_id (Igraph_builder.exit_id b)
+    in
+    Igraph_builder.insert b ~next:[| fallthrough_id |]
+      op_start_id
+      { inst = Call (Call_immediate { func; tail })
+      ; inputs
+      ; output = result
+      ; trap_stack
+      }
+    ;
+    ()
+  | T (Cop (op, expr, _dbg), _) ->
+    let op_start_id = Igraph_builder.next_id b in
+    let destination =
+      List.map expr
+        ~f:(fun (T (_, dtyp)) -> Igraph_builder.temp b dtyp, dtyp)
+    in
+    transl_var_exprs
+      b
+      ~source:expr
+      ~destination
+      ~this_id
+      ~fallthrough_id:op_start_id
+      exits
+      ~trap_stack
+    ;
+    let inputs = Array.of_list_map ~f:fst destination in
+    transl_op
+      b
+      op
+      ~inputs
+      ~this_id:op_start_id
+      ~fallthrough_id
+      ~trap_stack
+      ~result
+    ;
+    ()
+
+and transl_op
+    (b : _ Igraph_builder.t)
+    (cmm : Cmm.operation)
+    ~inputs
+    ~(this_id:Node_id.t)
+    ~(fallthrough_id:Node_id.t)
+    ~trap_stack
+    ~result
+  =
+  let dmm_op, next =
+    match cmm with
+    | Craise kind ->
+      Dmm.Dinst.Flow (Raise kind), Some (Igraph_builder.raise_id b)
+    | Capply _ ->
+      let tail =
+        (* CR smuenzel: this means we can't insert no-ops after *)
+        Node_id.equal fallthrough_id (Igraph_builder.exit_id b)
+      in
+      Call (Call_indirect { tail }), None
+    | Cextcall (func, ty_res, ty_args, alloc) ->
+      let ty_args = Array.of_list ty_args in
+      Call (Call_ext { func; ty_res; ty_args; alloc }), None
+    | Cload { memory_chunk; mutability; is_atomic } ->
+      Mem (Load { memory_chunk; mutability; is_atomic }), None
+    | Calloc ->
+      Mem Alloc, None
+    | Cstore (memory_chunk, init) ->
+      Mem (Store { memory_chunk; init }), None
+    | Caddi | Caddv | Cadda ->
+      Pure (I Add), None
+    | Csubi ->
+      Pure (I Sub), None
+    | Cmuli ->
+      Pure (I Mul), None
+    | Cmulhi ->
+      Pure (I Mulh), None
+    | Cdivi ->
+      Pure (I Div), None
+    | Cmodi ->
+      Pure (I Mod), None
+    | Cand ->
+      Pure (I And), None
+    | Cor ->
+      Pure (I Or), None
+    | Cxor ->
+      Pure (I Xor), None
+    | Clsl ->
+      Pure (I Lsl), None
+    | Clsr ->
+      Pure (I Lsr), None
+    | Casr ->
+      Pure (I Asr), None
+    | Ccmpi comparison
+    | Ccmpa comparison ->
+      Pure (I (Cmp { signed = true; comparison})), None
+    | Cnegf ->
+      Pure (F Neg), None
+    | Cabsf ->
+      Pure (F Abs), None
+    | Caddf ->
+      Pure (F Add), None
+    | Csubf ->
+      Pure (F Sub), None
+    | Cmulf ->
+      Pure (F Mul), None
+    | Cdivf ->
+      Pure (F Div), None
+    | Cfloatofint ->
+      Pure (F Of_int), None
+    | Cintoffloat ->
+      Pure (F To_int), None
+    | Ccmpf comparison ->
+      Pure (F (Cmp comparison)), None
+    | Ccheckbound ->
+      Flow Checkbound, None
+    | Copaque ->
+      Opaque, None
+    | Cdls_get ->
+      Mem Dls_get, None
+  in
+  let next = Option.value ~default:fallthrough_id next in
+  Igraph_builder.insert b
+    this_id
+    ~next:[| next |]
+    { inst = dmm_op
+    ; inputs
+    ; output = result
+    ; trap_stack
+    }
+  ;
+  ()
+
 and transl_test
     (b : _ Igraph_builder.t)
     (cmm : Tcmm.Texpr.t)
@@ -319,6 +486,7 @@ and transl_test
     ~result:(Some test_result)
   ;
   Dmm_intf.Test.Bool { then_value = true }, [| test_result |]
+
 and transl_var_exprs
     (b : _ Igraph_builder.t)
     ~(source:Tcmm.Texpr.t list)

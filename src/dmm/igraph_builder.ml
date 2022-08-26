@@ -15,10 +15,11 @@ type 'a t =
   ; mutable current_var_id : int
   ; nodes : 'a Node_id.Table.t
   ; graph : G.t
-  ; first_id : Node_id.t
-  ; last_id : Node_id.t
+  ; enter_id : Node_id.t
+  ; exit_id : Node_id.t
+  ; raise_id : Node_id.t
   ; temp_vars : Cmm.machtype Dvar.Table.t
-  }
+  } [@@deriving fields]
 
 let next_id (t : _ t) =
   let result = t.current_node_id in
