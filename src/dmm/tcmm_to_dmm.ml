@@ -326,20 +326,16 @@ let rec transl
     (* CR smuenzel: a little hacky to match on arguments, should be done in an earlier
        translation *)
     let op_start_id = Igraph_builder.next_id b in
-    let destination =
-      List.map expr
-        ~f:(fun (T (_, dtyp)) -> Igraph_builder.temp b dtyp, dtyp)
+    let inputs =
+      transl_var_exprs_fresh_destination
+        b
+        ~source:expr
+        ~this_id
+        ~fallthrough_id:op_start_id
+        exits
+        ~trap_stack
+      |> Array.of_list
     in
-    transl_var_exprs
-      b
-      ~source:expr
-      ~destination
-      ~this_id
-      ~fallthrough_id:op_start_id
-      exits
-      ~trap_stack
-    ;
-    let inputs = Array.of_list_map ~f:fst destination in
     let tail =
       (* CR smuenzel: this means we can't insert no-ops after *)
       Node_id.equal fallthrough_id (Igraph_builder.exit_id b)
@@ -355,20 +351,16 @@ let rec transl
     ()
   | T (Cop (op, expr, _dbg), _) ->
     let op_start_id = Igraph_builder.next_id b in
-    let destination =
-      List.map expr
-        ~f:(fun (T (_, dtyp)) -> Igraph_builder.temp b dtyp, dtyp)
+    let inputs =
+      transl_var_exprs_fresh_destination
+        b
+        ~source:expr
+        ~this_id
+        ~fallthrough_id:op_start_id
+        exits
+        ~trap_stack
+      |> Array.of_list
     in
-    transl_var_exprs
-      b
-      ~source:expr
-      ~destination
-      ~this_id
-      ~fallthrough_id:op_start_id
-      exits
-      ~trap_stack
-    ;
-    let inputs = Array.of_list_map ~f:fst destination in
     transl_op
       b
       op
@@ -523,6 +515,58 @@ and transl_var_exprs
       b
       ~source:ss
       ~destination:ds
+      ~this_id:next_id
+      ~fallthrough_id
+      exits
+      ~trap_stack
+
+and transl_var_exprs_fresh_destination
+    (b : _ Igraph_builder.t)
+    ~(source:Tcmm.Texpr.t list)
+    ~(this_id:Node_id.t)
+    ~(fallthrough_id:Node_id.t)
+    exits
+    ~trap_stack
+  =
+  match source with
+  | [] ->
+    Igraph_builder.insert b
+      this_id
+      ~next:[| fallthrough_id |]
+      { inst = Nop
+      ; inputs = [||]
+      ; output = None
+      ; trap_stack
+      }
+    ;
+    []
+  | T (Cvar v, _) :: ss ->
+    (* CR smuenzel: check that this is always correct for mutables, and maybe
+       mark vars as mutables *)
+    v
+      :: 
+      transl_var_exprs_fresh_destination
+        b
+        ~source:ss
+        ~this_id
+        ~fallthrough_id
+        exits
+        ~trap_stack
+  | (T (_, dtyp) as s) :: ss ->
+    let next_id = Igraph_builder.next_id b in
+    let v = Igraph_builder.temp b dtyp in
+    transl b
+      ~this_id
+      s
+      ~fallthrough_id:next_id
+      ~result:(Some v)
+      exits
+      ~trap_stack
+    ;
+    v ::
+    transl_var_exprs_fresh_destination
+      b
+      ~source:ss
       ~this_id:next_id
       ~fallthrough_id
       exits

@@ -249,11 +249,26 @@ let%expect_test "" =
     ~f:(fun g ->
       Igraph_builder.to_dot g
         ~f:(fun x ->
-            let f = Format.str_formatter in
-            Format.pp_set_margin f 20;
-            Sexp.pp_hum f ([%sexp_of: Dmm_intf.Dinst.t] x.inst);
-            Format.flush_str_formatter ()
-            |> String.substr_replace_all ~pattern:"\n" ~with_:"\\n"
+            let i_sexp =
+              let f = Format.str_formatter in
+              Format.pp_set_margin f 20;
+              Sexp.pp_hum f ([%sexp_of: Dmm_intf.Dinst.t] x.inst);
+              Format.flush_str_formatter ()
+              |> String.substr_replace_all ~pattern:"\n" ~with_:"\\n"
+            in
+            let inputs =
+              Array.to_list x.inputs
+              |> List.map ~f:(Printf.sprintf !"i:%{sexp:Dmm_intf.Dvar.t}")
+            in
+            let output =
+              match x.output with
+              | None -> []
+              | Some output ->
+                [ Printf.sprintf !"o:%{sexp:Dmm_intf.Dvar.t}" output ]
+            in
+            String.concat
+              ~sep:"\\n"
+              (List.concat [ [ i_sexp ] ; inputs; output ] )
           )
       |> Compile_helper.run_graph_easy
       |> print_endline
@@ -261,6 +276,8 @@ let%expect_test "" =
   [%expect {|
                             ┌─────────────────────┐
                             │        Move         │
+                            │    i:(Var z_44)     │
+                            │     o:(Temp 1)      │
                             └─────────────────────┘
                               │
                               │
@@ -268,6 +285,7 @@ let%expect_test "" =
                             ┌─────────────────────┐
                             │        (Pure        │
                             │   (I (Const 1)))    │
+                            │     o:(Temp 2)      │
                             └─────────────────────┘
                               │
                               │
@@ -284,6 +302,9 @@ let%expect_test "" =
                             │        (Cmp         │
                             │    (signed true)    │
                             │ (comparison Cne)))) │
+                            │     i:(Temp 1)      │
+                            │     i:(Temp 2)      │
+                            │     o:(Temp 0)      │
                             └─────────────────────┘
                               │
                               │
@@ -292,14 +313,17 @@ let%expect_test "" =
     │                 │     │        (Flow        │
     │      (Pure      │     │  (Test_and_branch   │
     │ (I (Const 1)))  │     │        (Bool        │
-    │                 │     │     (then_value     │
-    │                 │ ◀── │      true))))       │
+    │  o:(Var x_48)   │     │     (then_value     │
+    │                 │     │      true))))       │
+    │                 │ ◀── │     i:(Temp 0)      │
     └─────────────────┘     └─────────────────────┘
       │                       │
       │                       │
       ▼                       ▼
     ┌─────────────────┐     ┌─────────────────────┐
     │      Move       │     │        Move         │
+    │  i:(Var z_44)   │     │    i:(Var z_44)     │
+    │   o:(Temp 6)    │     │     o:(Temp 4)      │
     └─────────────────┘     └─────────────────────┘
       │                       │
       │                       │
@@ -307,6 +331,7 @@ let%expect_test "" =
     ┌─────────────────┐     ┌─────────────────────┐
     │      (Pure      │     │        (Pure        │
     │ (I (Const -2))) │     │   (I (Const 3)))    │
+    │   o:(Temp 7)    │     │     o:(Temp 5)      │
     └─────────────────┘     └─────────────────────┘
       │                       │
       │                       │
@@ -321,8 +346,11 @@ let%expect_test "" =
     │                 │     │        (Pure        │
     │                 │     │         (I          │
     │ (Pure (I Add))  │     │        (Cmp         │
-    │                 │     │    (signed true)    │
-    │                 │     │ (comparison Cne)))) │
+    │   i:(Temp 6)    │     │    (signed true)    │
+    │   i:(Temp 7)    │     │ (comparison Cne)))) │
+    │  o:(Var y_47)   │     │     i:(Temp 4)      │
+    │                 │     │     i:(Temp 5)      │
+    │                 │     │     o:(Temp 3)      │
     └─────────────────┘     └─────────────────────┘
       │                       │
       │                       │
@@ -332,7 +360,8 @@ let%expect_test "" =
     │                 │     │  (Test_and_branch   │     │                          │
     │       Nop       │     │        (Bool        │     │           Nop            │
     │                 │     │     (then_value     │     │                          │
-    │                 │     │      true))))       │ ──▶ │                          │
+    │                 │     │      true))))       │     │                          │
+    │                 │     │     i:(Temp 3)      │ ──▶ │                          │
     └─────────────────┘     └─────────────────────┘     └──────────────────────────┘
       │                       │                           │
       │                       │                           │
@@ -341,7 +370,7 @@ let%expect_test "" =
       │                     │                     │     │          (Call           │
       │                     │        (Pure        │     │     (Call_immediate      │
       │                     │  (I (Const 245)))   │     │          (func           │
-      │                     │                     │     │ camlTest__Pmakeblock_46) │
+      │                     │    o:(Var x_48)     │     │ camlTest__Pmakeblock_46) │
       │                     │                     │     │      (tail true)))       │
       │                     └─────────────────────┘     └──────────────────────────┘
       │                       │                           │
@@ -350,6 +379,7 @@ let%expect_test "" =
       │                     ┌─────────────────────┐       │
       │                     │        (Pure        │       │
       │                     │   (I (Const 1)))    │       │
+      │                     │    o:(Var y_47)     │       │
       │                     └─────────────────────┘       │
       │                       │                           │
       │                       │                           │
@@ -362,19 +392,24 @@ let%expect_test "" =
       │                       ▼                           │
       │                     ┌─────────────────────┐       │
       │                     │        (Pure        │       │
-      └───────────────────▶ │  (I (Const 1024)))  │       │
+      │                     │  (I (Const 1024)))  │       │
+      └───────────────────▶ │     o:(Temp 8)      │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
                               ▼                           │
                             ┌─────────────────────┐       │
                             │        Move         │       │
+                            │    i:(Var x_48)     │       │
+                            │     o:(Temp 12)     │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
                               ▼                           │
                             ┌─────────────────────┐       │
                             │        Move         │       │
+                            │    i:(Var y_47)     │       │
+                            │     o:(Temp 13)     │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
@@ -387,6 +422,9 @@ let%expect_test "" =
                               ▼                           │
                             ┌─────────────────────┐       │
                             │   (Pure (I Add))    │       │
+                            │     i:(Temp 12)     │       │
+                            │     i:(Temp 13)     │       │
+                            │     o:(Temp 10)     │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
@@ -394,6 +432,7 @@ let%expect_test "" =
                             ┌─────────────────────┐       │
                             │        (Pure        │       │
                             │   (I (Const -1)))   │       │
+                            │     o:(Temp 11)     │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
@@ -406,6 +445,9 @@ let%expect_test "" =
                               ▼                           │
                             ┌─────────────────────┐       │
                             │   (Pure (I Add))    │       │
+                            │     i:(Temp 10)     │       │
+                            │     i:(Temp 11)     │       │
+                            │     o:(Temp 9)      │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
@@ -418,6 +460,8 @@ let%expect_test "" =
                               ▼                           │
                             ┌─────────────────────┐       │
                             │     (Mem Alloc)     │       │
+                            │     i:(Temp 8)      │       │
+                            │     i:(Temp 9)      │       │
                             └─────────────────────┘       │
                               │                           │
                               │                           │
