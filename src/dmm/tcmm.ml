@@ -32,6 +32,7 @@ module Gen_expr = struct
     | Cexit of int * 'expr list
     | Ctrywith of 'expr * Dvar.t * 'expr
                   * Debuginfo.t
+  [@@deriving sexp_of]
 
   let t4_m3 ~f (a,b,c,d) = (a,b,f c,d)
 
@@ -70,7 +71,7 @@ let join_machtype_exn (a : Cmm.machtype) (b : Cmm.machtype) =
   else Array.map2_exn a b ~f:Cmm.lub_component
 
 module Tcell : sig
-  type t
+  type t [@@deriving sexp_of]
 
   val create : Cmm.machtype option -> t
   val create_empty : unit -> t
@@ -92,6 +93,10 @@ module Tcell : sig
   val copy : t -> t
 end = struct
   type t = Cmm.machtype option UnionFind.elem
+
+  let sexp_of_t t =
+    UnionFind.get t
+    |> [%sexp_of: Cmm.machtype option]
 
   let create m = UnionFind.make m
   let create_some m = create (Some m)
@@ -136,11 +141,14 @@ end = struct
 end
 
 module Texpr_cell = struct
-  type t = T : t Gen_expr.t * Tcell.t -> t
+  type t = T : t Gen_expr.t * Tcell.t -> t [@@deriving sexp_of]
 end
 
 module Texpr = struct
   type t = T : t Gen_expr.t * Cmm.machtype -> t
+
+  let rec sexp_of_t (T (ge, mt)) =
+    [%sexp_of: t Gen_expr.t * Cmm.machtype] (ge, mt)
 end
 
 module Env : sig

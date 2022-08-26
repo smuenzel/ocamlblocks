@@ -35,8 +35,49 @@ module Backend = struct
 end
 let backend = (module Backend : Backend_intf.S)
 
+let extra_header = 
+{|
+
+external ( = ) : 'a -> 'a -> bool = "%equal"
+external ( <> ) : 'a -> 'a -> bool = "%notequal"
+external ( < ) : 'a -> 'a -> bool = "%lessthan"
+external ( > ) : 'a -> 'a -> bool = "%greaterthan"
+external ( <= ) : 'a -> 'a -> bool = "%lessequal"
+external ( >= ) : 'a -> 'a -> bool = "%greaterequal"
+external compare : 'a -> 'a -> int = "%compare"
+
+external ( == ) : 'a -> 'a -> bool = "%eq"
+external ( != ) : 'a -> 'a -> bool = "%noteq"
+
+external not : bool -> bool = "%boolnot"
+external ( && ) : bool -> bool -> bool = "%sequand"
+external ( || ) : bool -> bool -> bool = "%sequor"
+
+external ( ~- ) : int -> int = "%negint"
+external ( ~+ ) : int -> int = "%identity"
+external succ : int -> int = "%succint"
+external pred : int -> int = "%predint"
+external ( + ) : int -> int -> int = "%addint"
+external ( - ) : int -> int -> int = "%subint"
+external ( * ) : int -> int -> int = "%mulint"
+external ( / ) : int -> int -> int = "%divint"
+external ( mod ) : int -> int -> int = "%modint"
+
+external ( land ) : int -> int -> int = "%andint"
+external ( lor ) : int -> int -> int = "%orint"
+external ( lxor ) : int -> int -> int = "%xorint"
+
+external ( lsl ) : int -> int -> int = "%lslint"
+external ( lsr ) : int -> int -> int = "%lsrint"
+external ( asr ) : int -> int -> int = "%asrint"
+|} 
+
 let compile_structure str =
+  let str = extra_header ^ str in
   Clflags.native_code := true;
+  Clflags.no_std_include := true;
+  Clflags.nopervasives := true;
+  Clflags.afl_instrument := false;
   let parsetree = Parse.implementation (Lexing.from_string str) in
   (* {[
        Load_path.init
@@ -53,7 +94,7 @@ let compile_structure str =
         let env =
           Typemod.initial_env
             ~loc:Location.none
-            ~initially_opened_module:(Some "Stdlib")
+            ~initially_opened_module:None (* (Some "Stdlib") *)
             ~open_implicit_modules:[]
         in
         Typemod.type_structure env parsetree
