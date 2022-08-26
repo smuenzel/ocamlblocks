@@ -14,7 +14,7 @@ module Call = struct
         ; ty_args : Cmm.exttype array
         ; alloc : bool
         }
-
+  [@@deriving sexp_of]
 end
 
 module Test = struct
@@ -23,6 +23,7 @@ module Test = struct
     | Integer of { signed : bool; comparison : Cmm.integer_comparison }
     | Float of Cmm.float_comparison
     | Parity of { even : bool }
+  [@@deriving sexp_of]
 end
 
 module Control_flow = struct
@@ -33,6 +34,7 @@ module Control_flow = struct
     | Switch of int array
     | Raise of Lambda.raise_kind
     | Checkbound
+  [@@deriving sexp_of]
 end
 
 module Pure_op = struct
@@ -52,6 +54,7 @@ module Pure_op = struct
       | Asr
       | Cmp of { signed : bool; comparison : Cmm.integer_comparison }
       | Const of Nativeint.t
+    [@@deriving sexp_of]
   end
 
   module Float = struct
@@ -66,6 +69,7 @@ module Pure_op = struct
       | To_int
       | Cmp of Cmm.float_comparison
       | Const of float
+    [@@deriving sexp_of]
   end
 
   type t =
@@ -73,6 +77,7 @@ module Pure_op = struct
     | F of Float.t
     | Symbol of string
     | Assemble_tuple
+  [@@deriving sexp_of]
 end
 
 module Mem_op = struct
@@ -88,6 +93,7 @@ module Mem_op = struct
         }
     | Alloc
     | Dls_get
+  [@@deriving sexp_of]
 end
 
 module Dinst = struct
@@ -100,6 +106,7 @@ module Dinst = struct
     | Opaque
     | Trap of { direction : [ `Enter | `Leave ] }
     | Nop
+  [@@deriving sexp_of]
 end
 
 module Node_id : sig
@@ -121,7 +128,7 @@ end
 module Trap_id = Unique_id.Int()
 
 module Trap_stack = struct
-  type t = Trap_id.t list
+  type t = Trap_id.t list [@@deriving sexp_of]
 
   let add_fresh_trap t =
     Trap_id.create () :: t
@@ -167,7 +174,7 @@ module Inst_args = struct
     ; inputs : Dvar.t array
     ; output : Dvar.t option
     ; trap_stack : Trap_stack.t
-    }
+    } [@@deriving sexp_of]
 end
 
 module Inst_notrap = struct
