@@ -130,3 +130,50 @@ let compile_structure str =
   ; clambda_convert : Clambda.with_constants
   ; cmm : Cmm.phrase list
   }
+
+let run_graph_easy g =
+  let exe = "/usr/bin/graph-easy" in
+  let process_info =
+    Core_unix.create_process
+      ~prog:exe
+      ~args:[ "--as=boxart" ]
+  in
+  let to_proc = Core_unix.out_channel_of_descr process_info.stdin in
+  Out_channel.output_string to_proc g;
+  Out_channel.close to_proc;
+  let of_proc = Core_unix.in_channel_of_descr process_info.stdout in
+  In_channel.input_all of_proc
+
+let%expect_test "graph-easy" =
+  let g =
+    {|
+digraph graphname
+ {
+     a [ label = "x\ny"];
+     a -> b -> c;
+     b -> d;
+ }
+      |}
+  in
+  run_graph_easy g
+  |> print_endline;
+  [%expect {|
+              ┌───┐
+              │ x │
+              │ y │
+              └───┘
+                │
+                │
+                ▼
+    ┌───┐     ┌───┐
+    │ d │ ◀── │ b │
+    └───┘     └───┘
+                │
+                │
+                ▼
+              ┌───┐
+              │ c │
+              └───┘ |}]
+
+
+  
