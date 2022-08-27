@@ -10,20 +10,6 @@ module Dvar = Dmm.Dvar
 module Dinst = Dmm.Dinst
 module Trap_stack = Dmm.Trap_stack
 
-module Id_maker : sig
-  type t
-  val create : unit -> t
-  val next : t -> Node_id.t
-end = struct
-  type t = Node_id.t ref
-
-  let create () = ref Node_id.zero
-  let next t =
-    let v = !t in
-    t := Node_id.succ v;
-    v
-end
-
 module Insert_result : sig 
   type t [@@immediate]
 
@@ -356,7 +342,7 @@ let rec transl
     in
     let tail =
       (* CR smuenzel: this means we can't insert no-ops after *)
-      Node_id.equal fallthrough_id (Igraph_builder.exit_id b)
+      Node_id.equal fallthrough_id Node_id.exit
     in
     Igraph_builder.insert b ~next:[| fallthrough_id |]
       op_start_id
@@ -407,14 +393,14 @@ and transl_op
     | Craise kind ->
       let next =
         match Map.find trap_handlers trap_stack with
-        | None -> Some (Igraph_builder.raise_id b)
+        | None -> Some Node_id.raise
         | Some _ as handler -> handler
       in
       Dmm.Dinst.Flow (Raise kind), next
     | Capply _ ->
       let tail =
         (* CR smuenzel: this means we can't insert no-ops after *)
-        Node_id.equal fallthrough_id (Igraph_builder.exit_id b)
+        Node_id.equal fallthrough_id Node_id.exit
       in
       Call (Call_indirect { tail }), None
     | Cextcall (func, ty_res, ty_args, alloc) ->

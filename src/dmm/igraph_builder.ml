@@ -20,9 +20,6 @@ type 'a t =
   ; mutable current_var_id : int
   ; nodes : 'a Node_id.Table.t
   ; graph : (G.t [@sexp.opaque])
-  ; enter_id : Node_id.t
-  ; exit_id : Node_id.t
-  ; raise_id : Node_id.t
   ; temp_vars : Cmm.machtype Dvar.Table.t
   } [@@deriving fields]
 
@@ -37,9 +34,6 @@ let sexp_of_t
     ; current_var_id
     ; nodes
     ; graph
-    ; enter_id
-    ; exit_id
-    ; raise_id
     ; temp_vars
     }
   =
@@ -47,8 +41,8 @@ let sexp_of_t
   let graph =
     Top.fold
       (fun node_id acc ->
-         if Node_id.equal node_id exit_id
-         || Node_id.equal node_id raise_id
+         if Node_id.equal node_id Node_id.exit
+         || Node_id.equal node_id Node_id.raise
          then acc
          else begin
            let c = Hashtbl.find_exn nodes node_id in
@@ -67,14 +61,11 @@ let sexp_of_t
   [%sexp
     { current_node_id : Node_id.t 
     ; current_var_id : int
-    ; enter_id : Node_id.t
-    ; exit_id : Node_id.t
-    ; raise_id : Node_id.t
     ; temp_vars : Cmm.machtype Dvar.Table.t
     ; graph : Sexp.t list
     }]
 
-let to_dot { nodes; exit_id; raise_id; graph; _ } ~f =
+let to_dot { nodes; graph; _ } ~f =
   let b = Buffer.create 1000 in
   Buffer.add_string b "digraph igraph {\n";
   Hashtbl.iteri nodes
@@ -89,8 +80,8 @@ let to_dot { nodes; exit_id; raise_id; graph; _ } ~f =
             )
       )
   ;
-  Buffer.add_string b (Printf.sprintf "%i [ label = \"<EXIT>\"]\n"  (Node_id.to_int exit_id));
-  Buffer.add_string b (Printf.sprintf "%i [ label = \"<RAISE>\"]\n"  (Node_id.to_int raise_id));
+  Buffer.add_string b (Printf.sprintf "%i [ label = \"<EXIT>\"]\n"  Node_id.(to_int exit));
+  Buffer.add_string b (Printf.sprintf "%i [ label = \"<RAISE>\"]\n"  Node_id.(to_int raise));
   Buffer.add_string b "}\n";
   Buffer.contents b
 
@@ -118,13 +109,25 @@ let map t ~f =
   let graph = G.copy t.graph in
   { t with nodes; temp_vars; graph }
 
+let update_edge_targets t ~f =
+  (* We allow f to update the graph while we traverse, which means we need to copy the
+     edges first. *)
+  let edges = G.fold_edges_e List.cons t.graph [] in
+  List.iter edges
+    ~f:(fun ((from, edge_index, to_) as old_edge) ->
+        let from_node = Hashtbl.find_exn t.nodes from in
+        let to_node = Hashtbl.find t.nodes to_ in
+        match f ~from ~from_node ~edge_index ~to_ ~to_node with
+        | None -> ()
+        | Some new_target ->
+          G.remove_edge_e t.graph old_edge;
+          G.add_edge_e t.graph (from, edge_index, new_target)
+      )
+
 let create
   ()
   =
-  let exit_id = Node_id.zero in
-  let raise_id = Node_id.succ exit_id in
-  let enter_id = Node_id.succ raise_id in
-  let current_node_id = Node_id.succ enter_id in
+  let current_node_id = Node_id.succ Node_id.enter in
   let current_var_id = 0 in
   let nodes = Node_id.Table.create () in
   let graph = G.create () in
@@ -133,9 +136,6 @@ let create
   ; current_var_id
   ; nodes
   ; graph
-  ; enter_id
-  ; exit_id
-  ; raise_id
   ; temp_vars
   }
 

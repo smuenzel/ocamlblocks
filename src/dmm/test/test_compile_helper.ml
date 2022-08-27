@@ -124,8 +124,8 @@ let%expect_test "" =
           Tcmm_to_dmm.transl
             graph
             tcmm
-            ~this_id:(Igraph_builder.enter_id graph)
-            ~fallthrough_id:(Igraph_builder.exit_id graph)
+            ~this_id:Dmm_intf.Node_id.enter
+            ~fallthrough_id:Dmm_intf.Node_id.exit
             Int.Map.empty
             ~trap_stack:[]
             ~trap_handlers:Tcmm_to_dmm.Trap_stack.Map.empty
@@ -140,8 +140,7 @@ let%expect_test "" =
   ;
   ();
   [%expect {|
-    (((current_node_id 29) (current_var_id 10) (enter_id 2) (exit_id 0)
-      (raise_id 1)
+    (((current_node_id 29) (current_var_id 10)
       (temp_vars
        (((Temp 0) (Int)) ((Temp 1) (Int)) ((Temp 2) (Int)) ((Temp 3) (Int))
         ((Temp 4) (Int)) ((Temp 5) (Int)) ((Temp 6) (Int)) ((Temp 7) (Int))
@@ -231,36 +230,222 @@ let%expect_test "" =
         ((node_id 22) (next (0))
          (c
           ((inst (Mem Alloc)) (inputs ((Temp 6) (Temp 7))) (output) (trap_stack)))))))
-     ((current_node_id 3) (current_var_id 0) (enter_id 2) (exit_id 0)
-      (raise_id 1) (temp_vars)
+     ((current_node_id 3) (current_var_id 0) (temp_vars)
       (graph
        (((node_id 2) (next (0))
          (c ((inst (Pure (I (Const 1)))) (inputs) (output) (trap_stack)))))))) |}];
+  let dot_f ~inst ~inputs ~output x =
+    let i_sexp =
+      let f = Format.str_formatter in
+      Format.pp_set_margin f 20;
+      Sexp.pp_hum f ([%sexp_of: Dmm_intf.Dinst.t] (inst x));
+      Format.flush_str_formatter ()
+      |> String.substr_replace_all ~pattern:"\n" ~with_:"\\n"
+    in
+    let inputs =
+      Array.to_list (inputs x)
+      |> List.map ~f:(Printf.sprintf !"i:%{sexp:Dmm_intf.Dvar.t}")
+    in
+    let output =
+      match output x with
+      | None -> []
+      | Some output ->
+        [ Printf.sprintf !"o:%{sexp:Dmm_intf.Dvar.t}" output ]
+    in
+    String.concat
+      ~sep:"\\n"
+      (List.concat [ [ i_sexp ] ; inputs; output ] )
+
+  in
   List.iter graphs
     ~f:(fun g ->
       Igraph_builder.to_dot g
-        ~f:(fun x ->
-            let i_sexp =
-              let f = Format.str_formatter in
-              Format.pp_set_margin f 20;
-              Sexp.pp_hum f ([%sexp_of: Dmm_intf.Dinst.t] x.inst);
-              Format.flush_str_formatter ()
-              |> String.substr_replace_all ~pattern:"\n" ~with_:"\\n"
-            in
-            let inputs =
-              Array.to_list x.inputs
-              |> List.map ~f:(Printf.sprintf !"i:%{sexp:Dmm_intf.Dvar.t}")
-            in
-            let output =
-              match x.output with
-              | None -> []
-              | Some output ->
-                [ Printf.sprintf !"o:%{sexp:Dmm_intf.Dvar.t}" output ]
-            in
-            String.concat
-              ~sep:"\\n"
-              (List.concat [ [ i_sexp ] ; inputs; output ] )
-          )
+        ~f:(Dmm_intf.Inst_args.(dot_f ~inst ~inputs ~output))
+      |> Compile_helper.run_graph_easy
+      |> print_endline
+    );
+  [%expect {|
+                            ┌─────────────────────┐
+                            │        (Pure        │
+                            │   (I (Const 1)))    │
+                            │     o:(Temp 1)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │         Nop         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │        (Pure        │
+                            │         (I          │
+                            │        (Cmp         │
+                            │    (signed true)    │
+                            │ (comparison Cne)))) │
+                            │    i:(Var z_44)     │
+                            │     i:(Temp 1)      │
+                            │     o:(Temp 0)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │                 │     │        (Flow        │
+    │      (Pure      │     │  (Test_and_branch   │
+    │ (I (Const 1)))  │     │        (Bool        │
+    │  o:(Var x_48)   │     │     (then_value     │
+    │                 │     │      true))))       │
+    │                 │ ◀── │     i:(Temp 0)      │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │      (Pure      │     │        (Pure        │
+    │ (I (Const -2))) │     │   (I (Const 3)))    │
+    │   o:(Temp 5)    │     │     o:(Temp 3)      │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │       Nop       │     │         Nop         │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐
+    │                 │     │        (Pure        │
+    │                 │     │         (I          │
+    │ (Pure (I Add))  │     │        (Cmp         │
+    │  i:(Var z_44)   │     │    (signed true)    │
+    │   i:(Temp 5)    │     │ (comparison Cne)))) │
+    │  o:(Var y_47)   │     │    i:(Var z_44)     │
+    │                 │     │     i:(Temp 3)      │
+    │                 │     │     o:(Temp 2)      │
+    └─────────────────┘     └─────────────────────┘
+      │                       │
+      │                       │
+      ▼                       ▼
+    ┌─────────────────┐     ┌─────────────────────┐     ┌───────────────────────────┐
+    │                 │     │        (Flow        │     │                           │
+    │                 │     │  (Test_and_branch   │     │           (Pure           │
+    │       Nop       │     │        (Bool        │     │          (Symbol          │
+    │                 │     │     (then_value     │     │ camlTest__Pmakeblock_46)) │
+    │                 │     │      true))))       │     │        o:(Temp 4)         │
+    │                 │     │     i:(Temp 2)      │ ──▶ │                           │
+    └─────────────────┘     └─────────────────────┘     └───────────────────────────┘
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           ▼
+      │                     ┌─────────────────────┐     ┌───────────────────────────┐
+      │                     │        (Pure        │     │                           │
+      │                     │  (I (Const 245)))   │     │            Nop            │
+      │                     │    o:(Var x_48)     │     │                           │
+      │                     └─────────────────────┘     └───────────────────────────┘
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           ▼
+      │                     ┌─────────────────────┐     ┌───────────────────────────┐
+      │                     │        (Pure        │     │           (Flow           │
+      │                     │   (I (Const 1)))    │     │          (Raise           │
+      │                     │    o:(Var y_47)     │     │      Raise_notrace))      │
+      │                     │                     │     │        i:(Temp 4)         │
+      │                     └─────────────────────┘     └───────────────────────────┘
+      │                       │                           │
+      │                       │                           │
+      │                       ▼                           ▼
+      │                     ┌─────────────────────┐     ┌───────────────────────────┐
+      │                     │         Nop         │     │          <RAISE>          │
+      │                     └─────────────────────┘     └───────────────────────────┘
+      │                       │
+      │                       │
+      │                       ▼
+      │                     ┌─────────────────────┐
+      │                     │        (Pure        │
+      │                     │  (I (Const 1024)))  │
+      └───────────────────▶ │     o:(Temp 6)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │         Nop         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │   (Pure (I Add))    │
+                            │    i:(Var x_48)     │
+                            │    i:(Var y_47)     │
+                            │     o:(Temp 8)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │        (Pure        │
+                            │   (I (Const -1)))   │
+                            │     o:(Temp 9)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │         Nop         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │   (Pure (I Add))    │
+                            │     i:(Temp 8)      │
+                            │     i:(Temp 9)      │
+                            │     o:(Temp 7)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │         Nop         │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │     (Mem Alloc)     │
+                            │     i:(Temp 6)      │
+                            │     i:(Temp 7)      │
+                            └─────────────────────┘
+                              │
+                              │
+                              ▼
+                            ┌─────────────────────┐
+                            │       <EXIT>        │
+                            └─────────────────────┘
+
+    ┌────────────────┐
+    │    <RAISE>     │
+    └────────────────┘
+    ┌────────────────┐
+    │     (Pure      │
+    │ (I (Const 1))) │
+    └────────────────┘
+      │
+      │
+      ▼
+    ┌────────────────┐
+    │     <EXIT>     │
+    └────────────────┘ |}];
+  let graphs_notrap = List.map graphs ~f:Dmm_remove_trap.remove_trap in
+  List.iter graphs_notrap
+    ~f:(fun g ->
+      Igraph_builder.to_dot g
+        ~f:(Dmm_intf.Inst_notrap.(dot_f ~inst ~inputs ~output))
       |> Compile_helper.run_graph_easy
       |> print_endline
     );

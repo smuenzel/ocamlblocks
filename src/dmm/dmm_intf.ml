@@ -112,7 +112,12 @@ end
 module Node_id : sig
   type t [@@immediate] [@@deriving sexp_of]
 
-  val zero : t
+  val exit : t
+  val enter : t
+  val raise : t
+
+  val is_leaving_node : t -> bool
+
   val succ : t -> t
   val of_int : int -> t
   val to_int : t -> int
@@ -122,6 +127,11 @@ module Node_id : sig
   include Hashable.S_plain with type t := t
 
 end = struct
+  let exit = 0
+  let raise = 1
+  let enter = 2
+
+  let is_leaving_node t = (t = exit) || (t = raise)
   include Int
 end
 
@@ -134,8 +144,21 @@ module Trap_stack = struct
   include T
   include Comparable.Make_plain(T)
 
+  let empty = []
+
   let add_fresh_trap t =
     Trap_id.create () :: t
+
+  let trap_delta ~source ~destination =
+    (* CR smuenzel: validation remainder stack is identical *)
+    let open Int.Replace_polymorphic_compare in
+    let l_source = List.length source in
+    let l_destination = List.length destination in
+    if l_source > l_destination
+    then `Pop (l_source - l_destination)
+    else if l_source = l_destination
+    then `Nothing
+    else `Push (List.rev (List.take destination (l_destination - l_source)))
 
 end
 
@@ -179,7 +202,7 @@ module Inst_args = struct
     ; inputs : Dvar.t array
     ; output : Dvar.t option
     ; trap_stack : Trap_stack.t
-    } [@@deriving sexp_of]
+    } [@@deriving sexp_of, fields]
 end
 
 module Inst_notrap = struct
@@ -189,7 +212,7 @@ module Inst_notrap = struct
     { inst : Dinst.t
     ; inputs : Dvar.t array
     ; output : Dvar.t option
-    }
+    } [@@deriving sexp_of, fields]
 
 end
 
