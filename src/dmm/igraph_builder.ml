@@ -8,25 +8,28 @@ module Dvar = Dmm.Dvar
 
 module Node_id = Dmm.Node_id
 
-module G = Graph.Imperative.Digraph.ConcreteBidirectional(Node_id)
-
-module Node = struct
-  type 'a t =
-    { contents : 'a
-    ; next : Node_id.t array
-    }
+module Edge_ordering = struct
+  type t = int [@@deriving compare]
+  let default = 0
 end
+
+module G = Graph.Imperative.Digraph.ConcreteBidirectionalLabeled(Node_id)(Edge_ordering)
 
 type 'a t =
   { mutable current_node_id : Node_id.t 
   ; mutable current_var_id : int
-  ; nodes : 'a Node.t Node_id.Table.t
+  ; nodes : 'a Node_id.Table.t
   ; graph : (G.t [@sexp.opaque])
   ; enter_id : Node_id.t
   ; exit_id : Node_id.t
   ; raise_id : Node_id.t
   ; temp_vars : Cmm.machtype Dvar.Table.t
   } [@@deriving fields]
+
+let next_g graph node_id =
+  G.succ_e graph node_id
+  |> List.sort ~compare:[%compare: _ * int * Node_id.t]
+  |> List.map ~f:Tuple3.get3
 
 let sexp_of_t
     sexp_of_a
@@ -48,10 +51,11 @@ let sexp_of_t
          || Node_id.equal node_id raise_id
          then acc
          else begin
-           let { Node. contents = c ; next } = Hashtbl.find_exn nodes node_id in
+           let c = Hashtbl.find_exn nodes node_id in
+           let next = next_g graph node_id in
            [%sexp
              { node_id : Node_id.t
-             ; next : Node_id.t array
+             ; next : Node_id.t list
              ; c : a 
              }] :: acc
          end
@@ -70,14 +74,15 @@ let sexp_of_t
     ; graph : Sexp.t list
     }]
 
-let to_dot { nodes; exit_id; raise_id; _ } ~f =
+let to_dot { nodes; exit_id; raise_id; graph; _ } ~f =
   let b = Buffer.create 1000 in
   Buffer.add_string b "digraph igraph {\n";
   Hashtbl.iteri nodes
-    ~f:(fun ~key ~data:{ Node. contents; next } ->
+    ~f:(fun ~key ~data:contents ->
         Printf.sprintf "%i [ label = \"%s\"];\n" (Node_id.to_int key) (f contents)
         |> Buffer.add_string b;
-        Array.iter next
+        let next = next_g graph key in
+        List.iter next
           ~f:(fun next ->
               Printf.sprintf "%i -> %i;\n" (Node_id.to_int key) (Node_id.to_int next)
               |> Buffer.add_string b
@@ -95,15 +100,10 @@ let next_id (t : _ t) =
   result
 
 let insert t node_id value ~next =
-  let node =
-    { Node.
-      contents = value
-    ; next
-    }
-  in
-  Hashtbl.add_exn t.nodes ~key:node_id ~data:node;
+  Hashtbl.add_exn t.nodes ~key:node_id ~data:value;
   G.add_vertex t.graph node_id;
-  Array.iter next ~f:(G.add_edge t.graph node_id)
+  Array.iteri next
+    ~f:(fun i v -> G.add_edge_e t.graph (G.E.create node_id i v))
 
 let temp t machtype =
   let var_id = t.current_var_id in
@@ -114,7 +114,9 @@ let temp t machtype =
 
 let map t ~f =
   let nodes = Hashtbl.map ~f t.nodes in
-  { t with nodes }
+  let temp_vars = Hashtbl.copy t.temp_vars in
+  let graph = G.copy t.graph in
+  { t with nodes; temp_vars; graph }
 
 let create
   ()
