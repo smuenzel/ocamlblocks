@@ -54,4 +54,10 @@ let remove_trap (b : Dmm.Inst_args.t Igraph_builder.t) =
         }
       )
 
-
+let remove_nop (b : Dmm.Inst_notrap.t Igraph_builder.t) =
+  Igraph_builder.filter_nodes b
+    ~f:(fun x ->
+        match x.inst with
+        | Nop -> false
+        | _ -> true
+      )

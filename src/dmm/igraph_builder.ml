@@ -72,12 +72,14 @@ let to_dot { nodes; graph; _ } ~f =
     ~f:(fun ~key ~data:contents ->
         Printf.sprintf "%i [ label = \"%s\"];\n" (Node_id.to_int key) (f contents)
         |> Buffer.add_string b;
-        let next = next_g graph key in
-        List.iter next
-          ~f:(fun next ->
-              Printf.sprintf "%i -> %i;\n" (Node_id.to_int key) (Node_id.to_int next)
-              |> Buffer.add_string b
-            )
+        G.iter_succ_e 
+          (fun (_,index,next) ->
+            (if index = 0
+             then Printf.sprintf "%i -> %i;\n" (Node_id.to_int key) (Node_id.to_int next)
+             else Printf.sprintf "%i -> %i [ label = \"%i\" ] ;\n" (Node_id.to_int key) (Node_id.to_int next) index
+            ) |> Buffer.add_string b
+          )
+          graph key
       )
   ;
   Buffer.add_string b (Printf.sprintf "%i [ label = \"<EXIT>\"]\n"  Node_id.(to_int exit));
@@ -122,6 +124,24 @@ let update_edge_targets t ~f =
         | Some new_target ->
           G.remove_edge_e t.graph old_edge;
           G.add_edge_e t.graph (from, edge_index, new_target)
+      )
+
+let filter_nodes t ~f =
+  let nodes = Hashtbl.to_alist t.nodes in
+  List.iter nodes
+    ~f:(fun (key, data) ->
+        match f data with
+        | true -> ()
+        | false ->
+          assert ((G.out_degree t.graph key) = 1);
+          let out_node = List.hd_exn (G.fold_succ List.cons t.graph key []) in
+          let in_nodes = G.fold_pred_e List.cons t.graph key [] in
+          G.remove_vertex t.graph key;
+          Hashtbl.remove t.nodes key;
+          List.iter in_nodes
+            ~f:(fun (in_node_id, in_node_index, _) ->
+                G.add_edge_e t.graph (in_node_id, in_node_index, out_node)
+              )
       )
 
 let create
