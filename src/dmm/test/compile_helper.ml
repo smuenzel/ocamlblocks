@@ -37,6 +37,7 @@ let backend = (module Backend : Backend_intf.S)
 
 let extra_header = 
 {|
+exception Assert_failure = Assert_failure
 
 external ( = ) : 'a -> 'a -> bool = "%equal"
 external ( <> ) : 'a -> 'a -> bool = "%notequal"
@@ -101,6 +102,8 @@ let compile_structure str =
       with
       | Typetexp.Error (_,_,error) ->
         raise_s [%message "error typing" (error : Typetexp.error)]
+      | Typecore.Error (_,_,error) ->
+        raise_s [%message "error typing" (error : Typecore.error)]
     in
     ttstr
   in

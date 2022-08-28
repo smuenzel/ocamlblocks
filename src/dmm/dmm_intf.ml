@@ -32,7 +32,7 @@ module Control_flow = struct
     | Return
     | Test_and_branch of Test.t
     | Switch of int array
-    | Raise of Lambda.raise_kind
+    | Raise of { kind : Lambda.raise_kind; local : bool }
     | Checkbound
   [@@deriving sexp_of]
 end

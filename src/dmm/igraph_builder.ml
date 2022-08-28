@@ -72,9 +72,10 @@ let to_dot { nodes; graph; _ } ~f =
     ~f:(fun ~key ~data:contents ->
         Printf.sprintf "%i [ label = \"%s\"];\n" (Node_id.to_int key) (f contents)
         |> Buffer.add_string b;
+        let omit_label = G.out_degree graph key <= 1 in
         G.iter_succ_e 
           (fun (_,index,next) ->
-            (if index = 0
+            (if omit_label
              then Printf.sprintf "%i -> %i;\n" (Node_id.to_int key) (Node_id.to_int next)
              else Printf.sprintf "%i -> %i [ label = \"%i\" ] ;\n" (Node_id.to_int key) (Node_id.to_int next) index
             ) |> Buffer.add_string b

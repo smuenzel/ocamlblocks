@@ -391,12 +391,12 @@ and transl_op
   let dmm_op, next =
     match cmm with
     | Craise kind ->
-      let next =
+      let next, local =
         match Map.find trap_handlers trap_stack with
-        | None -> Some Node_id.raise
-        | Some _ as handler -> handler
+        | None -> Some Node_id.raise, false
+        | Some _ as handler -> handler, true
       in
-      Dmm.Dinst.Flow (Raise kind), next
+      Dmm.Dinst.Flow (Raise { kind; local }), next
     | Capply _ ->
       let tail =
         (* CR smuenzel: this means we can't insert no-ops after *)
