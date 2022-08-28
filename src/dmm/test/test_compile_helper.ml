@@ -151,20 +151,7 @@ let%expect_test "" =
      ((Cconst_int 1) (Int))) |}];
   let graphs =
     List.map tcmm
-      ~f:(fun tcmm ->
-          let graph = Igraph_builder.create () in
-          Tcmm_to_dmm.transl
-            graph
-            tcmm
-            ~this_id:Dmm_intf.Node_id.enter
-            ~fallthrough_id:Dmm_intf.Node_id.exit
-            Int.Map.empty
-            ~trap_stack:[]
-            ~trap_handlers:Tcmm_to_dmm.Trap_stack.Map.empty
-            ~result:(Some (Var (Dmm_intf.Backend_var.create_local "output")))
-          ;
-          graph
-        )
+      ~f:Tcmm_to_dmm.transl_fun
   in
   graphs
   |> [%sexp_of: Dmm_intf.Inst_args.t Igraph_builder.t list]
@@ -172,141 +159,145 @@ let%expect_test "" =
   ;
   ();
   [%expect {|
-    (((current_node_id 40) (current_var_id 13)
+    (((current_node_id 41) (current_var_id 13)
       (temp_vars
        (((Temp 0) (Int)) ((Temp 1) (Int)) ((Temp 2) (Int)) ((Temp 3) (Int))
         ((Temp 4) (Int)) ((Temp 5) (Int)) ((Temp 6) (Int)) ((Temp 7) (Int))
         ((Temp 8) (Int)) ((Temp 9) (Int)) ((Temp 10) (Int)) ((Temp 11) (Val))
         ((Temp 12) (Int))))
       (graph
-       (((node_id 2) (next (9))
+       (((node_id 2) (next (3))
+         (c ((inst Start_function) (inputs) (output) (trap_stack))))
+        ((node_id 3) (next (10))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Temp 1)))
            (trap_stack (0)))))
-        ((node_id 9) (next (8))
+        ((node_id 10) (next (9))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 8) (next (7))
+        ((node_id 9) (next (8))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Cne)))))
            (inputs ((Var z_48) (Temp 1))) (output ((Temp 0))) (trap_stack (0)))))
-        ((node_id 7) (next (10 11))
+        ((node_id 8) (next (11 12))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 0))) (output) (trap_stack (0)))))
-        ((node_id 11) (next (21))
+        ((node_id 12) (next (22))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var x_58)))
            (trap_stack (0)))))
-        ((node_id 10) (next (14))
+        ((node_id 11) (next (15))
          (c
           ((inst (Pure (I (Const 3)))) (inputs) (output ((Temp 3)))
            (trap_stack (0)))))
-        ((node_id 21) (next (24))
+        ((node_id 22) (next (25))
          (c
           ((inst (Pure (I (Const -2)))) (inputs) (output ((Temp 5)))
            (trap_stack (0)))))
+        ((node_id 15) (next (14))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 25) (next (24))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
         ((node_id 14) (next (13))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 24) (next (23))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 13) (next (12))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Cne)))))
            (inputs ((Var z_48) (Temp 3))) (output ((Temp 2))) (trap_stack (0)))))
-        ((node_id 23) (next (22))
+        ((node_id 24) (next (23))
          (c
           ((inst (Pure (I Add))) (inputs ((Var z_48) (Temp 5)))
            (output ((Var y_57))) (trap_stack (0)))))
-        ((node_id 12) (next (15 16))
+        ((node_id 13) (next (16 17))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 2))) (output) (trap_stack (0)))))
-        ((node_id 22) (next (6))
+        ((node_id 23) (next (7))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 16) (next (19))
+        ((node_id 17) (next (20))
          (c
           ((inst (Pure (I (Const 245)))) (inputs) (output ((Var x_58)))
            (trap_stack (0)))))
-        ((node_id 15) (next (18))
+        ((node_id 16) (next (19))
          (c
           ((inst (Pure (Symbol camlTest__Pmakeblock_60))) (inputs)
            (output ((Temp 4))) (trap_stack (0)))))
-        ((node_id 19) (next (20))
+        ((node_id 20) (next (21))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var y_57)))
            (trap_stack (0)))))
-        ((node_id 18) (next (17))
+        ((node_id 19) (next (18))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 20) (next (6))
+        ((node_id 21) (next (7))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 17) (next (4))
+        ((node_id 18) (next (5))
          (c
           ((inst (Flow (Raise (kind Raise_notrace) (local true))))
            (inputs ((Temp 4))) (output ((Var output_70))) (trap_stack (0)))))
-        ((node_id 6) (next (26))
+        ((node_id 7) (next (27))
          (c
           ((inst (Pure (I (Const 1024)))) (inputs) (output ((Temp 6)))
            (trap_stack (0)))))
-        ((node_id 4) (next (5))
+        ((node_id 5) (next (6))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 26) (next (30))
+        ((node_id 27) (next (31))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 5) (next (35)) (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 30) (next (29))
+        ((node_id 6) (next (36)) (c ((inst Nop) (inputs) (output) (trap_stack))))
+        ((node_id 31) (next (30))
          (c
           ((inst (Pure (I Add))) (inputs ((Var x_58) (Var y_57)))
            (output ((Temp 8))) (trap_stack (0)))))
-        ((node_id 35) (next (34))
+        ((node_id 36) (next (35))
          (c
           ((inst
             (Mem
              (Load (memory_chunk Word_val) (mutability Mutable)
               (is_atomic false))))
            (inputs ((Var exn_50))) (output ((Temp 11))) (trap_stack))))
-        ((node_id 29) (next (31))
+        ((node_id 30) (next (32))
          (c
           ((inst (Pure (I (Const -1)))) (inputs) (output ((Temp 9)))
            (trap_stack (0)))))
-        ((node_id 34) (next (36))
+        ((node_id 35) (next (37))
          (c
           ((inst (Pure (Symbol caml_exn_Assert_failure))) (inputs)
            (output ((Temp 12))) (trap_stack))))
-        ((node_id 31) (next (28))
+        ((node_id 32) (next (29))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 36) (next (33))
+        ((node_id 37) (next (34))
          (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 28) (next (27))
+        ((node_id 29) (next (28))
          (c
           ((inst (Pure (I Add))) (inputs ((Temp 8) (Temp 9))) (output ((Temp 7)))
            (trap_stack (0)))))
-        ((node_id 33) (next (32))
+        ((node_id 34) (next (33))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Ceq)))))
            (inputs ((Temp 11) (Temp 12))) (output ((Temp 10))) (trap_stack))))
-        ((node_id 27) (next (25))
+        ((node_id 28) (next (26))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 32) (next (37 38))
+        ((node_id 33) (next (38 39))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 10))) (output) (trap_stack))))
-        ((node_id 25) (next (3))
+        ((node_id 26) (next (4))
          (c
           ((inst (Mem Alloc)) (inputs ((Temp 6) (Temp 7)))
            (output ((Var output_70))) (trap_stack (0)))))
-        ((node_id 38) (next (39))
+        ((node_id 39) (next (40))
          (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 37) (next (0))
+        ((node_id 38) (next (0))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var output_70)))
            (trap_stack))))
-        ((node_id 3) (next (0)) (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 39) (next (1))
+        ((node_id 4) (next (0)) (c ((inst Nop) (inputs) (output) (trap_stack))))
+        ((node_id 40) (next (1))
          (c
           ((inst (Flow (Raise (kind Raise_notrace) (local false))))
            (inputs ((Var exn_50))) (output ((Var output_70))) (trap_stack)))))))
-     ((current_node_id 3) (current_var_id 0) (temp_vars)
+     ((current_node_id 4) (current_var_id 0) (temp_vars)
       (graph
-       (((node_id 2) (next (0))
+       (((node_id 2) (next (3))
+         (c ((inst Start_function) (inputs) (output) (trap_stack))))
+        ((node_id 3) (next (0))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var output_71)))
            (trap_stack)))))))) |}];
@@ -341,6 +332,12 @@ let%expect_test "" =
       |> print_endline
     );
   [%expect {|
+                                                         ┌───────────────────────────┐
+                                                         │      Start_function       │
+                                                         └───────────────────────────┘
+                                                           │
+                                                           │
+                                                           ▼
                                                          ┌───────────────────────────┐
                                                          │           (Pure           │
                                                          │      (I (Const 1)))       │
@@ -545,6 +542,12 @@ let%expect_test "" =
     │      <RAISE>      │
     └───────────────────┘
     ┌───────────────────┐
+    │  Start_function   │
+    └───────────────────┘
+      │
+      │
+      ▼
+    ┌───────────────────┐
     │       (Pure       │
     │  (I (Const 1)))   │
     │ o:(Var output_71) │
@@ -564,6 +567,19 @@ let%expect_test "" =
       |> print_endline
     );
   [%expect {|
+                                                          ┌───────────────────────────┐
+                                                          │      Start_function       │
+                                                          └───────────────────────────┘
+                                                            │
+                                                            │
+                                                            ▼
+                                                          ┌───────────────────────────┐
+                                                          │           (Trap           │
+                                                          │    (direction Enter))     │
+                                                          └───────────────────────────┘
+                                                            │
+                                                            │
+                                                            ▼
                                                           ┌───────────────────────────┐
                                                           │           (Pure           │
                                                           │      (I (Const 1)))       │
@@ -776,6 +792,12 @@ let%expect_test "" =
     │      <RAISE>      │
     └───────────────────┘
     ┌───────────────────┐
+    │  Start_function   │
+    └───────────────────┘
+      │
+      │
+      ▼
+    ┌───────────────────┐
     │       (Pure       │
     │  (I (Const 1)))   │
     │ o:(Var output_71) │
@@ -796,6 +818,19 @@ let%expect_test "" =
     );
   ();
   [%expect {|
+                                     ┌───────────────────────────┐
+                                     │      Start_function       │
+                                     └───────────────────────────┘
+                                       │
+                                       │
+                                       ▼
+                                     ┌───────────────────────────┐
+                                     │           (Trap           │
+                                     │    (direction Enter))     │
+                                     └───────────────────────────┘
+                                       │
+                                       │
+                                       ▼
                                      ┌───────────────────────────┐
                                      │           (Pure           │
                                      │      (I (Const 1)))       │
@@ -955,6 +990,12 @@ let%expect_test "" =
     ┌───────────────────┐
     │      <RAISE>      │
     └───────────────────┘
+    ┌───────────────────┐
+    │  Start_function   │
+    └───────────────────┘
+      │
+      │
+      ▼
     ┌───────────────────┐
     │       (Pure       │
     │  (I (Const 1)))   │

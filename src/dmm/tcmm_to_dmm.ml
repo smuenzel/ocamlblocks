@@ -592,5 +592,32 @@ and transl_var_exprs_fresh_destination
       ~trap_stack
       ~trap_handlers
 
+let transl_fun
+    dcmm
+  =
+  let graph = Igraph_builder.create () in
+  let first_id = Igraph_builder.next_id graph in
+  Igraph_builder.insert
+    graph
+    Node_id.enter
+    { Dmm.Inst_args.
+      inst = Start_function
+    ; inputs = [||]
+    ; output = None
+    ; trap_stack = Trap_stack.empty
+    }
+    ~next:[| first_id |]
+  ;
+  transl
+    graph
+    dcmm
+    ~this_id:first_id
+    ~fallthrough_id:Node_id.exit
+    Int.Map.empty
+    ~trap_stack:Trap_stack.empty
+    ~result:(Some (Var (Dmm_intf.Backend_var.create_local "output")))
+    ~trap_handlers:Trap_stack.Map.empty 
+  ;
+  graph
 
 

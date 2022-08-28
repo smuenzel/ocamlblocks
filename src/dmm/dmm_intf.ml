@@ -106,6 +106,7 @@ module Dinst = struct
     | Opaque
     | Trap of { direction : [ `Enter | `Leave ] }
     | Nop
+    | Start_function
   [@@deriving sexp_of]
 end
 
@@ -139,7 +140,7 @@ module Trap_id = Unique_id.Int()
 
 module Trap_stack = struct
   module T = struct
-    type t = Trap_id.t list [@@deriving sexp_of, compare]
+    type t = Trap_id.t list [@@deriving sexp_of, compare, equal]
   end
   include T
   include Comparable.Make_plain(T)

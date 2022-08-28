@@ -12,38 +12,46 @@ let remove_trap (b : Dmm.Inst_args.t Igraph_builder.t) =
           | None -> Dmm.Trap_stack.empty
           | Some to_node -> to_node.trap_stack
         in
-        if Dmm.Trap_stack.equal from_node.trap_stack to_trap_stack
-        then None
-        else begin
-          match
-            Dmm.Trap_stack.trap_delta
-              ~source:from_node.trap_stack ~destination:to_trap_stack
-          with
-          | `Nothing -> assert false
-          | `Push _ -> assert false
-          | `Pop pop_count ->
-            let next_ids =
-              to_
-              :: List.init pop_count ~f:(fun _ -> Igraph_builder.next_id b)
-              |> List.rev
-            in
-            let rec iter = function
-              | id :: (id_next :: _ as rest) ->
-                Igraph_builder.insert b
-                  id 
-                  ~next:[| id_next |]
-                  { inst = Trap { direction = `Leave }
-                  ; inputs = [||]
-                  ; output = None
-                  ; trap_stack = to_trap_stack
-                  }
-                ;
-                iter rest
-              | _ :: [] | [] -> ()
-            in
-            iter next_ids;
-            Some (List.hd_exn next_ids)
-        end
+        match
+          Dmm.Trap_stack.trap_delta
+            ~source:from_node.trap_stack ~destination:to_trap_stack
+        with
+        | `Nothing -> None
+        | `Push _ ->
+          (* CR smuenzel: use parameter *)
+          let next_id = Igraph_builder.next_id b in
+          Igraph_builder.insert b
+            next_id
+            ~next:[| to_ |]
+            { inst = Trap { direction = `Enter }
+            ; inputs = [||]
+            ; output = None
+            ; trap_stack = to_trap_stack
+            }
+          ;
+          Some next_id
+        | `Pop pop_count ->
+          let next_ids =
+            to_
+            :: List.init pop_count ~f:(fun _ -> Igraph_builder.next_id b)
+            |> List.rev
+          in
+          let rec iter = function
+            | id :: (id_next :: _ as rest) ->
+              Igraph_builder.insert b
+                id 
+                ~next:[| id_next |]
+                { inst = Trap { direction = `Leave }
+                ; inputs = [||]
+                ; output = None
+                ; trap_stack = to_trap_stack
+                }
+              ;
+              iter rest
+            | _ :: [] | [] -> ()
+          in
+          iter next_ids;
+          Some (List.hd_exn next_ids)
       );
   Igraph_builder.map b
     ~f:(fun { inst; inputs; output; trap_stack = _ } ->
