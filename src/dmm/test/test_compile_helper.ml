@@ -28,7 +28,7 @@ let%expect_test "" =
           | 1 -> 122, 0
           | _ -> assert false
         in
-      Some (x + y)  
+        Some (x + y)  
       with
       | Assert_failure _ -> None
     |}
