@@ -159,7 +159,7 @@ let%expect_test "" =
   ;
   ();
   [%expect {|
-    (((current_node_id 41) (current_var_id 13)
+    (((current_node_id 40) (current_var_id 13)
       (temp_vars
        (((Temp 0) (Int)) ((Temp 1) (Int)) ((Temp 2) (Int)) ((Temp 3) (Int))
         ((Temp 4) (Int)) ((Temp 5) (Int)) ((Temp 6) (Int)) ((Temp 7) (Int))
@@ -168,131 +168,129 @@ let%expect_test "" =
       (graph
        (((node_id 2) (next (3))
          (c ((inst Start_function) (inputs) (output) (trap_stack))))
-        ((node_id 3) (next (10))
+        ((node_id 3) (next (9))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Temp 1)))
            (trap_stack (0)))))
-        ((node_id 10) (next (9))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
         ((node_id 9) (next (8))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 8) (next (7))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Cne)))))
            (inputs ((Var z_48) (Temp 1))) (output ((Temp 0))) (trap_stack (0)))))
-        ((node_id 8) (next (11 12))
+        ((node_id 7) (next (10 11))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 0))) (output) (trap_stack (0)))))
-        ((node_id 12) (next (22))
+        ((node_id 11) (next (21))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var x_58)))
            (trap_stack (0)))))
-        ((node_id 11) (next (15))
+        ((node_id 10) (next (14))
          (c
           ((inst (Pure (I (Const 3)))) (inputs) (output ((Temp 3)))
            (trap_stack (0)))))
-        ((node_id 22) (next (25))
+        ((node_id 21) (next (24))
          (c
           ((inst (Pure (I (Const -2)))) (inputs) (output ((Temp 5)))
            (trap_stack (0)))))
-        ((node_id 15) (next (14))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 25) (next (24))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
         ((node_id 14) (next (13))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 24) (next (23))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 13) (next (12))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Cne)))))
            (inputs ((Var z_48) (Temp 3))) (output ((Temp 2))) (trap_stack (0)))))
-        ((node_id 24) (next (23))
+        ((node_id 23) (next (22))
          (c
           ((inst (Pure (I Add))) (inputs ((Var z_48) (Temp 5)))
            (output ((Var y_57))) (trap_stack (0)))))
-        ((node_id 13) (next (16 17))
+        ((node_id 12) (next (15 16))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 2))) (output) (trap_stack (0)))))
-        ((node_id 23) (next (7))
+        ((node_id 22) (next (6))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 17) (next (20))
+        ((node_id 16) (next (19))
          (c
           ((inst (Pure (I (Const 245)))) (inputs) (output ((Var x_58)))
            (trap_stack (0)))))
-        ((node_id 16) (next (19))
+        ((node_id 15) (next (18))
          (c
           ((inst (Pure (Symbol camlTest__Pmakeblock_60))) (inputs)
            (output ((Temp 4))) (trap_stack (0)))))
-        ((node_id 20) (next (21))
+        ((node_id 19) (next (20))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var y_57)))
            (trap_stack (0)))))
-        ((node_id 19) (next (18))
+        ((node_id 18) (next (17))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 21) (next (7))
+        ((node_id 20) (next (6))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 18) (next (5))
+        ((node_id 17) (next (5))
          (c
           ((inst (Flow (Raise (kind Raise_notrace) (local true))))
            (inputs ((Temp 4))) (output ((Var output_70))) (trap_stack (0)))))
-        ((node_id 7) (next (27))
+        ((node_id 6) (next (26))
          (c
           ((inst (Pure (I (Const 1024)))) (inputs) (output ((Temp 6)))
            (trap_stack (0)))))
-        ((node_id 5) (next (6))
+        ((node_id 5) (next (35)) (c ((inst Nop) (inputs) (output) (trap_stack))))
+        ((node_id 26) (next (30))
          (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 27) (next (31))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 6) (next (36)) (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 31) (next (30))
-         (c
-          ((inst (Pure (I Add))) (inputs ((Var x_58) (Var y_57)))
-           (output ((Temp 8))) (trap_stack (0)))))
-        ((node_id 36) (next (35))
+        ((node_id 35) (next (34))
          (c
           ((inst
             (Mem
              (Load (memory_chunk Word_val) (mutability Mutable)
               (is_atomic false))))
            (inputs ((Var exn_50))) (output ((Temp 11))) (trap_stack))))
-        ((node_id 30) (next (32))
+        ((node_id 30) (next (29))
          (c
-          ((inst (Pure (I (Const -1)))) (inputs) (output ((Temp 9)))
-           (trap_stack (0)))))
-        ((node_id 35) (next (37))
+          ((inst (Pure (I Add))) (inputs ((Var x_58) (Var y_57)))
+           (output ((Temp 8))) (trap_stack (0)))))
+        ((node_id 34) (next (36))
          (c
           ((inst (Pure (Symbol caml_exn_Assert_failure))) (inputs)
            (output ((Temp 12))) (trap_stack))))
-        ((node_id 32) (next (29))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 37) (next (34))
-         (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 29) (next (28))
+        ((node_id 29) (next (31))
          (c
-          ((inst (Pure (I Add))) (inputs ((Temp 8) (Temp 9))) (output ((Temp 7)))
+          ((inst (Pure (I (Const -1)))) (inputs) (output ((Temp 9)))
            (trap_stack (0)))))
-        ((node_id 34) (next (33))
+        ((node_id 36) (next (33))
+         (c ((inst Nop) (inputs) (output) (trap_stack))))
+        ((node_id 31) (next (28))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 33) (next (32))
          (c
           ((inst (Pure (I (Cmp (signed true) (comparison Ceq)))))
            (inputs ((Temp 11) (Temp 12))) (output ((Temp 10))) (trap_stack))))
-        ((node_id 28) (next (26))
-         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
-        ((node_id 33) (next (38 39))
+        ((node_id 28) (next (27))
+         (c
+          ((inst (Pure (I Add))) (inputs ((Temp 8) (Temp 9))) (output ((Temp 7)))
+           (trap_stack (0)))))
+        ((node_id 32) (next (37 38))
          (c
           ((inst (Flow (Test_and_branch (Bool (then_value true)))))
            (inputs ((Temp 10))) (output) (trap_stack))))
-        ((node_id 26) (next (4))
-         (c
-          ((inst (Mem Alloc)) (inputs ((Temp 6) (Temp 7)))
-           (output ((Var output_70))) (trap_stack (0)))))
-        ((node_id 39) (next (40))
+        ((node_id 27) (next (25))
+         (c ((inst Nop) (inputs) (output) (trap_stack (0)))))
+        ((node_id 38) (next (39))
          (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 38) (next (0))
+        ((node_id 37) (next (0))
          (c
           ((inst (Pure (I (Const 1)))) (inputs) (output ((Var output_70)))
            (trap_stack))))
-        ((node_id 4) (next (0)) (c ((inst Nop) (inputs) (output) (trap_stack))))
-        ((node_id 40) (next (1))
+        ((node_id 25) (next (4))
+         (c
+          ((inst (Mem Alloc)) (inputs ((Temp 6) (Temp 7)))
+           (output ((Var output_70))) (trap_stack (0)))))
+        ((node_id 39) (next (1))
          (c
           ((inst (Flow (Raise (kind Raise_notrace) (local false))))
-           (inputs ((Var exn_50))) (output ((Var output_70))) (trap_stack)))))))
+           (inputs ((Var exn_50))) (output ((Var output_70))) (trap_stack))))
+        ((node_id 4) (next (0)) (c ((inst Nop) (inputs) (output) (trap_stack)))))))
      ((current_node_id 4) (current_var_id 0) (temp_vars)
       (graph
        (((node_id 2) (next (3))
@@ -332,211 +330,209 @@ let%expect_test "" =
       |> print_endline
     );
   [%expect {|
-                                                         ┌───────────────────────────┐
-                                                         │      Start_function       │
-                                                         └───────────────────────────┘
-                                                           │
-                                                           │
-                                                           ▼
-                                                         ┌───────────────────────────┐
-                                                         │           (Pure           │
-                                                         │      (I (Const 1)))       │
-                                                         │        o:(Temp 1)         │
-                                                         └───────────────────────────┘
-                                                           │
-                                                           │
-                                                           ▼
-                                                         ┌───────────────────────────┐
-                                                         │            Nop            │
-                                                         └───────────────────────────┘
-                                                           │
-                                                           │
-                                                           ▼
-                                                         ┌───────────────────────────┐
-                                                         │           (Pure           │
-                                                         │            (I             │
-                                                         │           (Cmp            │
-                                                         │       (signed true)       │
-                                                         │    (comparison Cne))))    │
-                                                         │       i:(Var z_48)        │
-                                                         │        i:(Temp 1)         │
-                                                         │        o:(Temp 0)         │
-                                                         └───────────────────────────┘
-                                                           │
-                                                           │
-                                                           ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐
-                              │                   │      │           (Flow           │
-                              │       (Pure       │      │     (Test_and_branch      │
-                              │  (I (Const 1)))   │      │           (Bool           │
-                              │   o:(Var x_58)    │      │        (then_value        │
-                              │                   │  1   │         true))))          │
-                              │                   │ ◀─── │        i:(Temp 0)         │
-                              └───────────────────┘      └───────────────────────────┘
-                                │                          │
-                                │                          │ 0
-                                ▼                          ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐
-                              │       (Pure       │      │           (Pure           │
-                              │  (I (Const -2)))  │      │      (I (Const 3)))       │
-                              │    o:(Temp 5)     │      │        o:(Temp 3)         │
-                              └───────────────────┘      └───────────────────────────┘
-                                │                          │
-                                │                          │
-                                ▼                          ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐
-                              │        Nop        │      │            Nop            │
-                              └───────────────────┘      └───────────────────────────┘
-                                │                          │
-                                │                          │
-                                ▼                          ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐
-                              │                   │      │           (Pure           │
-                              │                   │      │            (I             │
-                              │  (Pure (I Add))   │      │           (Cmp            │
-                              │   i:(Var z_48)    │      │       (signed true)       │
-                              │    i:(Temp 5)     │      │    (comparison Cne))))    │
-                              │   o:(Var y_57)    │      │       i:(Var z_48)        │
-                              │                   │      │        i:(Temp 3)         │
-                              │                   │      │        o:(Temp 2)         │
-                              └───────────────────┘      └───────────────────────────┘
-                                │                          │
-                                │                          │
-                                ▼                          ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-                              │                   │      │           (Flow           │      │                  │
-                              │                   │      │     (Test_and_branch      │      │      (Pure       │
-                              │        Nop        │      │           (Bool           │      │ (I (Const 245))) │
-                              │                   │      │        (then_value        │      │   o:(Var x_58)   │
-                              │                   │      │         true))))          │  1   │                  │
-                              │                   │      │        i:(Temp 2)         │ ───▶ │                  │
-                              └───────────────────┘      └───────────────────────────┘      └──────────────────┘
-                                │                          │                                  │
-                                │                          │ 0                                │
-                                ▼                          ▼                                  ▼
-                              ┌───────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-                              │       (Pure       │      │           (Pure           │      │      (Pure       │
-                              │ (I (Const 1024))) │      │          (Symbol          │      │  (I (Const 1)))  │
-                              │    o:(Temp 6)     │      │ camlTest__Pmakeblock_60)) │      │   o:(Var y_57)   │
-                              │                   │ ◀┐   │        o:(Temp 4)         │      │                  │
-                              └───────────────────┘  │   └───────────────────────────┘      └──────────────────┘
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  ▼
-                              ┌───────────────────┐  │   ┌───────────────────────────┐      ┌──────────────────┐
-                              │        Nop        │  │   │            Nop            │      │       Nop        │
-                              └───────────────────┘  │   └───────────────────────────┘      └──────────────────┘
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │                   │  │   │           (Flow           │        │
-                              │  (Pure (I Add))   │  │   │          (Raise           │        │
-                              │   i:(Var x_58)    │  │   │           (kind           │        │
-                              │   i:(Var y_57)    │  │   │      Raise_notrace)       │        │
-                              │    o:(Temp 8)     │  │   │      (local true)))       │        │
-                              │                   │  │   │        i:(Temp 4)         │        │
-                              │                   │  │   │     o:(Var output_70)     │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │       (Pure       │  │   │                           │        │
-                              │  (I (Const -1)))  │  │   │            Nop            │        │
-                              │    o:(Temp 9)     │  │   │                           │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │        Nop        │  │   │            Nop            │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │                   │  │   │           (Mem            │        │
-                              │                   │  │   │           (Load           │        │
-                              │  (Pure (I Add))   │  │   │       (memory_chunk       │        │
-                              │    i:(Temp 8)     │  │   │         Word_val)         │        │
-                              │    i:(Temp 9)     │  │   │        (mutability        │        │
-                              │    o:(Temp 7)     │  │   │         Mutable)          │        │
-                              │                   │  │   │    (is_atomic false)))    │        │
-                              │                   │  │   │      i:(Var exn_50)       │        │
-                              │                   │  │   │        o:(Temp 11)        │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │                   │  │   │           (Pure           │        │
-                              │        Nop        │  │   │          (Symbol          │        │
-                              │                   │  │   │ caml_exn_Assert_failure)) │        │
-                              │                   │  │   │        o:(Temp 12)        │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │    (Mem Alloc)    │  │   │                           │        │
-                              │    i:(Temp 6)     │  │   │            Nop            │        │
-                              │    i:(Temp 7)     │  │   │                           │        │
-                              │ o:(Var output_70) │  │   │                           │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-                              ┌───────────────────┐  │   ┌───────────────────────────┐        │
-                              │                   │  │   │           (Pure           │        │
-                              │                   │  │   │            (I             │        │
-                              │                   │  │   │           (Cmp            │        │
-                              │        Nop        │  │   │       (signed true)       │        │
-                              │                   │  │   │    (comparison Ceq))))    │        │
-                              │                   │  │   │        i:(Temp 11)        │        │
-                              │                   │  │   │        i:(Temp 12)        │        │
-                              │                   │  │   │        o:(Temp 10)        │        │
-                              └───────────────────┘  │   └───────────────────────────┘        │
-                                │                    │     │                                  │
-                                │                    │     │                                  │
-                                ▼                    │     ▼                                  │
-    ┌───────────────────┐     ┌───────────────────┐  │   ┌───────────────────────────┐        │
-    │                   │     │                   │  │   │           (Flow           │        │
-    │       (Pure       │     │                   │  │   │     (Test_and_branch      │        │
-    │  (I (Const 1)))   │     │      <EXIT>       │  │   │           (Bool           │        │
-    │ o:(Var output_70) │     │                   │  │   │        (then_value        │        │
-    │                   │     │                   │  │   │         true))))          │        │
-    │                   │ ──▶ │                   │  │   │        i:(Temp 10)        │ ─┐     │
-    └───────────────────┘     └───────────────────┘  │   └───────────────────────────┘  │     │
-      ▲                                              │     │                            │     │
-      │ 0                                            │     │ 1                          │     │
-      │                                              │     ▼                            │     │
-      │                                              │   ┌───────────────────────────┐  │     │
-      │                                              │   │            Nop            │  │     │
-      │                                              │   └───────────────────────────┘  │     │
-      │                                              │     │                            │     │
-      │                                              │     │                            │     │
-      │                                              │     ▼                            │     │
-      │                                              │   ┌───────────────────────────┐  │     │
-      │                                              │   │           (Flow           │  │     │
-      │                                              │   │          (Raise           │  │     │
-      │                                              │   │           (kind           │  │     │
-      │                                              │   │      Raise_notrace)       │  │     │
-      │                                              │   │      (local false)))      │  │     │
-      │                                              │   │      i:(Var exn_50)       │  │     │
-      │                                              │   │     o:(Var output_70)     │  │     │
-      │                                              │   └───────────────────────────┘  │     │
-      │                                              │     │                            │     │
-      │                                              │     │                            │     │
-      │                                              │     ▼                            │     │
-      │                                              │   ┌───────────────────────────┐  │     │
-      │                                              │   │          <RAISE>          │  │     │
-      │                                              │   └───────────────────────────┘  │     │
-      │                                              │                                  │     │
-      │                                              └──────────────────────────────────┼─────┘
-      │                                                                                 │
-      │                                                                                 │
-      └─────────────────────────────────────────────────────────────────────────────────┘
+                             ┌─────────────────────┐
+                             │   Start_function    │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │   (I (Const 1)))    │
+                             │     o:(Temp 1)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │         Nop         │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │         (I          │
+                             │        (Cmp         │
+                             │    (signed true)    │
+                             │ (comparison Cne)))) │
+                             │    i:(Var z_48)     │
+                             │     i:(Temp 1)      │
+                             │     o:(Temp 0)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Flow        │
+    │      (Pure      │      │  (Test_and_branch   │
+    │ (I (Const 1)))  │      │        (Bool        │
+    │  o:(Var x_58)   │      │     (then_value     │
+    │                 │  1   │      true))))       │
+    │                 │ ◀─── │     i:(Temp 0)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │ 0
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │      (Pure      │      │        (Pure        │
+    │ (I (Const -2))) │      │   (I (Const 3)))    │
+    │   o:(Temp 5)    │      │     o:(Temp 3)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │       Nop       │      │         Nop         │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Pure        │
+    │                 │      │         (I          │
+    │ (Pure (I Add))  │      │        (Cmp         │
+    │  i:(Var z_48)   │      │    (signed true)    │
+    │   i:(Temp 5)    │      │ (comparison Cne)))) │
+    │  o:(Var y_57)   │      │    i:(Var z_48)     │
+    │                 │      │     i:(Temp 3)      │
+    │                 │      │     o:(Temp 2)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐      ┌───────────────────────────┐
+    │                 │      │        (Flow        │      │                           │
+    │                 │      │  (Test_and_branch   │      │           (Pure           │
+    │       Nop       │      │        (Bool        │      │          (Symbol          │
+    │                 │      │     (then_value     │      │ camlTest__Pmakeblock_60)) │
+    │                 │      │      true))))       │  0   │        o:(Temp 4)         │
+    │                 │      │     i:(Temp 2)      │ ───▶ │                           │
+    └─────────────────┘      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │ 1                          │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │        (Pure        │      │                           │
+      │                      │  (I (Const 245)))   │      │            Nop            │
+      │                      │    o:(Var x_58)     │      │                           │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Flow           │
+      │                      │                     │      │          (Raise           │
+      │                      │        (Pure        │      │           (kind           │
+      │                      │   (I (Const 1)))    │      │      Raise_notrace)       │
+      │                      │    o:(Var y_57)     │      │      (local true)))       │
+      │                      │                     │      │        i:(Temp 4)         │
+      │                      │                     │      │     o:(Var output_70)     │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │         Nop         │      │            Nop            │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Mem            │
+      │                      │                     │      │           (Load           │
+      │                      │                     │      │       (memory_chunk       │
+      │                      │        (Pure        │      │         Word_val)         │
+      │                      │  (I (Const 1024)))  │      │        (mutability        │
+      │                      │     o:(Temp 6)      │      │         Mutable)          │
+      │                      │                     │      │    (is_atomic false)))    │
+      │                      │                     │      │      i:(Var exn_50)       │
+      └────────────────────▶ │                     │      │        o:(Temp 11)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │                     │      │           (Pure           │
+                             │         Nop         │      │          (Symbol          │
+                             │                     │      │ caml_exn_Assert_failure)) │
+                             │                     │      │        o:(Temp 12)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │   (Pure (I Add))    │      │                           │
+                             │    i:(Var x_58)     │      │            Nop            │
+                             │    i:(Var y_57)     │      │                           │
+                             │     o:(Temp 8)      │      │                           │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │                     │      │           (Pure           │
+                             │                     │      │            (I             │
+                             │        (Pure        │      │           (Cmp            │
+                             │   (I (Const -1)))   │      │       (signed true)       │
+                             │     o:(Temp 9)      │      │    (comparison Ceq))))    │
+                             │                     │      │        i:(Temp 11)        │
+                             │                     │      │        i:(Temp 12)        │
+                             │                     │      │        o:(Temp 10)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐      ┌───────────────────┐
+                             │                     │      │           (Flow           │      │                   │
+                             │                     │      │     (Test_and_branch      │      │       (Pure       │
+                             │         Nop         │      │           (Bool           │      │  (I (Const 1)))   │
+                             │                     │      │        (then_value        │      │ o:(Var output_70) │
+                             │                     │      │         true))))          │  0   │                   │
+                             │                     │      │        i:(Temp 10)        │ ───▶ │                   │
+                             └─────────────────────┘      └───────────────────────────┘      └───────────────────┘
+                               │                            │                                  │
+                               │                            │ 1                                │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │   (Pure (I Add))    │      │                           │        │
+                             │     i:(Temp 8)      │      │            Nop            │        │
+                             │     i:(Temp 9)      │      │                           │        │
+                             │     o:(Temp 7)      │      │                           │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                            │                                  │
+                               │                            │                                  │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │                     │      │           (Flow           │        │
+                             │                     │      │          (Raise           │        │
+                             │                     │      │           (kind           │        │
+                             │         Nop         │      │      Raise_notrace)       │        │
+                             │                     │      │      (local false)))      │        │
+                             │                     │      │      i:(Var exn_50)       │        │
+                             │                     │      │     o:(Var output_70)     │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                            │                                  │
+                               │                            │                                  │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │     (Mem Alloc)     │      │                           │        │
+                             │     i:(Temp 6)      │      │          <RAISE>          │        │
+                             │     i:(Temp 7)      │      │                           │        │
+                             │  o:(Var output_70)  │      │                           │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                                                               │
+                               │                                                               │
+                               ▼                                                               │
+                             ┌─────────────────────┐                                           │
+                             │         Nop         │                                           │
+                             └─────────────────────┘                                           │
+                               │                                                               │
+                               │                                                               │
+                               ▼                                                               │
+                             ┌─────────────────────┐                                           │
+                             │       <EXIT>        │ ◀─────────────────────────────────────────┘
+                             └─────────────────────┘
 
     ┌───────────────────┐
     │      <RAISE>      │
@@ -558,6 +554,7 @@ let%expect_test "" =
     ┌───────────────────┐
     │      <EXIT>       │
     └───────────────────┘ |}];
+  (* List.iter graphs ~f:Dmm_remove_trap.remove_nop_pre; *)
   let graphs_notrap = List.map graphs ~f:Dmm_remove_trap.remove_trap in
   List.iter graphs_notrap
     ~f:(fun g ->
@@ -567,226 +564,223 @@ let%expect_test "" =
       |> print_endline
     );
   [%expect {|
-                                                          ┌───────────────────────────┐
-                                                          │      Start_function       │
-                                                          └───────────────────────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                                                          ┌───────────────────────────┐
-                                                          │           (Trap           │
-                                                          │    (direction Enter))     │
-                                                          └───────────────────────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                                                          ┌───────────────────────────┐
-                                                          │           (Pure           │
-                                                          │      (I (Const 1)))       │
-                                                          │        o:(Temp 1)         │
-                                                          └───────────────────────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                                                          ┌───────────────────────────┐
-                                                          │            Nop            │
-                                                          └───────────────────────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                                                          ┌───────────────────────────┐
-                                                          │           (Pure           │
-                                                          │            (I             │
-                                                          │           (Cmp            │
-                                                          │       (signed true)       │
-                                                          │    (comparison Cne))))    │
-                                                          │       i:(Var z_48)        │
-                                                          │        i:(Temp 1)         │
-                                                          │        o:(Temp 0)         │
-                                                          └───────────────────────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐
-                              │                    │      │           (Flow           │
-                              │       (Pure        │      │     (Test_and_branch      │
-                              │   (I (Const 1)))   │      │           (Bool           │
-                              │    o:(Var x_58)    │      │        (then_value        │
-                              │                    │  1   │         true))))          │
-                              │                    │ ◀─── │        i:(Temp 0)         │
-                              └────────────────────┘      └───────────────────────────┘
-                                │                           │
-                                │                           │ 0
-                                ▼                           ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐
-                              │       (Pure        │      │           (Pure           │
-                              │  (I (Const -2)))   │      │      (I (Const 3)))       │
-                              │     o:(Temp 5)     │      │        o:(Temp 3)         │
-                              └────────────────────┘      └───────────────────────────┘
-                                │                           │
-                                │                           │
-                                ▼                           ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐
-                              │        Nop         │      │            Nop            │
-                              └────────────────────┘      └───────────────────────────┘
-                                │                           │
-                                │                           │
-                                ▼                           ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐
-                              │                    │      │           (Pure           │
-                              │                    │      │            (I             │
-                              │   (Pure (I Add))   │      │           (Cmp            │
-                              │    i:(Var z_48)    │      │       (signed true)       │
-                              │     i:(Temp 5)     │      │    (comparison Cne))))    │
-                              │    o:(Var y_57)    │      │       i:(Var z_48)        │
-                              │                    │      │        i:(Temp 3)         │
-                              │                    │      │        o:(Temp 2)         │
-                              └────────────────────┘      └───────────────────────────┘
-                                │                           │
-                                │                           │
-                                ▼                           ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-                              │                    │      │           (Flow           │      │                  │
-                              │                    │      │     (Test_and_branch      │      │      (Pure       │
-                              │        Nop         │      │           (Bool           │      │ (I (Const 245))) │
-                              │                    │      │        (then_value        │      │   o:(Var x_58)   │
-                              │                    │      │         true))))          │  1   │                  │
-                              │                    │      │        i:(Temp 2)         │ ───▶ │                  │
-                              └────────────────────┘      └───────────────────────────┘      └──────────────────┘
-                                │                           │                                  │
-                                │                           │ 0                                │
-                                ▼                           ▼                                  ▼
-                              ┌────────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-                              │       (Pure        │      │           (Pure           │      │      (Pure       │
-                              │ (I (Const 1024)))  │      │          (Symbol          │      │  (I (Const 1)))  │
-                              │     o:(Temp 6)     │      │ camlTest__Pmakeblock_60)) │      │   o:(Var y_57)   │
-                              │                    │ ◀┐   │        o:(Temp 4)         │      │                  │
-                              └────────────────────┘  │   └───────────────────────────┘      └──────────────────┘
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  ▼
-                              ┌────────────────────┐  │   ┌───────────────────────────┐      ┌──────────────────┐
-                              │        Nop         │  │   │            Nop            │      │       Nop        │
-                              └────────────────────┘  │   └───────────────────────────┘      └──────────────────┘
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │                    │  │   │           (Flow           │        │
-                              │   (Pure (I Add))   │  │   │          (Raise           │        │
-                              │    i:(Var x_58)    │  │   │           (kind           │        │
-                              │    i:(Var y_57)    │  │   │      Raise_notrace)       │        │
-                              │     o:(Temp 8)     │  │   │      (local true)))       │        │
-                              │                    │  │   │        i:(Temp 4)         │        │
-                              │                    │  │   │     o:(Var output_70)     │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │       (Pure        │  │   │                           │        │
-                              │  (I (Const -1)))   │  │   │            Nop            │        │
-                              │     o:(Temp 9)     │  │   │                           │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │        Nop         │  │   │           (Trap           │        │
-                              │                    │  │   │    (direction Leave))     │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │   (Pure (I Add))   │  │   │                           │        │
-                              │     i:(Temp 8)     │  │   │            Nop            │        │
-                              │     i:(Temp 9)     │  │   │                           │        │
-                              │     o:(Temp 7)     │  │   │                           │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │                    │  │   │           (Mem            │        │
-                              │                    │  │   │           (Load           │        │
-                              │                    │  │   │       (memory_chunk       │        │
-                              │                    │  │   │         Word_val)         │        │
-                              │        Nop         │  │   │        (mutability        │        │
-                              │                    │  │   │         Mutable)          │        │
-                              │                    │  │   │    (is_atomic false)))    │        │
-                              │                    │  │   │      i:(Var exn_50)       │        │
-                              │                    │  │   │        o:(Temp 11)        │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │    (Mem Alloc)     │  │   │           (Pure           │        │
-                              │     i:(Temp 6)     │  │   │          (Symbol          │        │
-                              │     i:(Temp 7)     │  │   │ caml_exn_Assert_failure)) │        │
-                              │ o:(Var output_70)  │  │   │        o:(Temp 12)        │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │       (Trap        │  │   │            Nop            │        │
-                              │ (direction Leave)) │  │   │                           │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-                              ┌────────────────────┐  │   ┌───────────────────────────┐        │
-                              │                    │  │   │           (Pure           │        │
-                              │                    │  │   │            (I             │        │
-                              │                    │  │   │           (Cmp            │        │
-                              │        Nop         │  │   │       (signed true)       │        │
-                              │                    │  │   │    (comparison Ceq))))    │        │
-                              │                    │  │   │        i:(Temp 11)        │        │
-                              │                    │  │   │        i:(Temp 12)        │        │
-                              │                    │  │   │        o:(Temp 10)        │        │
-                              └────────────────────┘  │   └───────────────────────────┘        │
-                                │                     │     │                                  │
-                                │                     │     │                                  │
-                                ▼                     │     ▼                                  │
-    ┌───────────────────┐     ┌────────────────────┐  │   ┌───────────────────────────┐        │
-    │                   │     │                    │  │   │           (Flow           │        │
-    │       (Pure       │     │                    │  │   │     (Test_and_branch      │        │
-    │  (I (Const 1)))   │     │       <EXIT>       │  │   │           (Bool           │        │
-    │ o:(Var output_70) │     │                    │  │   │        (then_value        │        │
-    │                   │     │                    │  │   │         true))))          │        │
-    │                   │ ──▶ │                    │  │   │        i:(Temp 10)        │ ─┐     │
-    └───────────────────┘     └────────────────────┘  │   └───────────────────────────┘  │     │
-      ▲                                               │     │                            │     │
-      │ 0                                             │     │ 1                          │     │
-      │                                               │     ▼                            │     │
-      │                                               │   ┌───────────────────────────┐  │     │
-      │                                               │   │            Nop            │  │     │
-      │                                               │   └───────────────────────────┘  │     │
-      │                                               │     │                            │     │
-      │                                               │     │                            │     │
-      │                                               │     ▼                            │     │
-      │                                               │   ┌───────────────────────────┐  │     │
-      │                                               │   │           (Flow           │  │     │
-      │                                               │   │          (Raise           │  │     │
-      │                                               │   │           (kind           │  │     │
-      │                                               │   │      Raise_notrace)       │  │     │
-      │                                               │   │      (local false)))      │  │     │
-      │                                               │   │      i:(Var exn_50)       │  │     │
-      │                                               │   │     o:(Var output_70)     │  │     │
-      │                                               │   └───────────────────────────┘  │     │
-      │                                               │     │                            │     │
-      │                                               │     │                            │     │
-      │                                               │     ▼                            │     │
-      │                                               │   ┌───────────────────────────┐  │     │
-      │                                               │   │          <RAISE>          │  │     │
-      │                                               │   └───────────────────────────┘  │     │
-      │                                               │                                  │     │
-      │                                               └──────────────────────────────────┼─────┘
-      │                                                                                  │
-      │                                                                                  │
-      └──────────────────────────────────────────────────────────────────────────────────┘
+                             ┌─────────────────────┐
+                             │   Start_function    │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Trap        │
+                             │ (direction Enter))  │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │   (I (Const 1)))    │
+                             │     o:(Temp 1)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │         Nop         │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │         (I          │
+                             │        (Cmp         │
+                             │    (signed true)    │
+                             │ (comparison Cne)))) │
+                             │    i:(Var z_48)     │
+                             │     i:(Temp 1)      │
+                             │     o:(Temp 0)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Flow        │
+    │      (Pure      │      │  (Test_and_branch   │
+    │ (I (Const 1)))  │      │        (Bool        │
+    │  o:(Var x_58)   │      │     (then_value     │
+    │                 │  1   │      true))))       │
+    │                 │ ◀─── │     i:(Temp 0)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │ 0
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │      (Pure      │      │        (Pure        │
+    │ (I (Const -2))) │      │   (I (Const 3)))    │
+    │   o:(Temp 5)    │      │     o:(Temp 3)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │       Nop       │      │         Nop         │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Pure        │
+    │                 │      │         (I          │
+    │ (Pure (I Add))  │      │        (Cmp         │
+    │  i:(Var z_48)   │      │    (signed true)    │
+    │   i:(Temp 5)    │      │ (comparison Cne)))) │
+    │  o:(Var y_57)   │      │    i:(Var z_48)     │
+    │                 │      │     i:(Temp 3)      │
+    │                 │      │     o:(Temp 2)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐      ┌───────────────────────────┐
+    │                 │      │        (Flow        │      │                           │
+    │                 │      │  (Test_and_branch   │      │           (Pure           │
+    │       Nop       │      │        (Bool        │      │          (Symbol          │
+    │                 │      │     (then_value     │      │ camlTest__Pmakeblock_60)) │
+    │                 │      │      true))))       │  0   │        o:(Temp 4)         │
+    │                 │      │     i:(Temp 2)      │ ───▶ │                           │
+    └─────────────────┘      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │ 1                          │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │        (Pure        │      │                           │
+      │                      │  (I (Const 245)))   │      │            Nop            │
+      │                      │    o:(Var x_58)     │      │                           │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Flow           │
+      │                      │                     │      │          (Raise           │
+      │                      │        (Pure        │      │           (kind           │
+      │                      │   (I (Const 1)))    │      │      Raise_notrace)       │
+      │                      │    o:(Var y_57)     │      │      (local true)))       │
+      │                      │                     │      │        i:(Temp 4)         │
+      │                      │                     │      │     o:(Var output_70)     │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │         Nop         │      │            Nop            │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Mem            │
+      │                      │                     │      │           (Load           │
+      │                      │                     │      │       (memory_chunk       │
+      │                      │        (Pure        │      │         Word_val)         │
+      │                      │  (I (Const 1024)))  │      │        (mutability        │
+      │                      │     o:(Temp 6)      │      │         Mutable)          │
+      │                      │                     │      │    (is_atomic false)))    │
+      │                      │                     │      │      i:(Var exn_50)       │
+      └────────────────────▶ │                     │      │        o:(Temp 11)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │                     │      │           (Pure           │
+                             │         Nop         │      │          (Symbol          │
+                             │                     │      │ caml_exn_Assert_failure)) │
+                             │                     │      │        o:(Temp 12)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │   (Pure (I Add))    │      │                           │
+                             │    i:(Var x_58)     │      │            Nop            │
+                             │    i:(Var y_57)     │      │                           │
+                             │     o:(Temp 8)      │      │                           │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │                     │      │           (Pure           │
+                             │                     │      │            (I             │
+                             │        (Pure        │      │           (Cmp            │
+                             │   (I (Const -1)))   │      │       (signed true)       │
+                             │     o:(Temp 9)      │      │    (comparison Ceq))))    │
+                             │                     │      │        i:(Temp 11)        │
+                             │                     │      │        i:(Temp 12)        │
+                             │                     │      │        o:(Temp 10)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐      ┌───────────────────┐
+                             │                     │      │           (Flow           │      │                   │
+                             │                     │      │     (Test_and_branch      │      │       (Pure       │
+                             │         Nop         │      │           (Bool           │      │  (I (Const 1)))   │
+                             │                     │      │        (then_value        │      │ o:(Var output_70) │
+                             │                     │      │         true))))          │  0   │                   │
+                             │                     │      │        i:(Temp 10)        │ ───▶ │                   │
+                             └─────────────────────┘      └───────────────────────────┘      └───────────────────┘
+                               │                            │                                  │
+                               │                            │ 1                                │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │   (Pure (I Add))    │      │                           │        │
+                             │     i:(Temp 8)      │      │            Nop            │        │
+                             │     i:(Temp 9)      │      │                           │        │
+                             │     o:(Temp 7)      │      │                           │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                            │                                  │
+                               │                            │                                  │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │                     │      │           (Flow           │        │
+                             │                     │      │          (Raise           │        │
+                             │                     │      │           (kind           │        │
+                             │         Nop         │      │      Raise_notrace)       │        │
+                             │                     │      │      (local false)))      │        │
+                             │                     │      │      i:(Var exn_50)       │        │
+                             │                     │      │     o:(Var output_70)     │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                            │                                  │
+                               │                            │                                  │
+                               ▼                            ▼                                  │
+                             ┌─────────────────────┐      ┌───────────────────────────┐        │
+                             │     (Mem Alloc)     │      │                           │        │
+                             │     i:(Temp 6)      │      │          <RAISE>          │        │
+                             │     i:(Temp 7)      │      │                           │        │
+                             │  o:(Var output_70)  │      │                           │        │
+                             └─────────────────────┘      └───────────────────────────┘        │
+                               │                                                               │
+                               │                                                               │
+                               ▼                                                               │
+                             ┌─────────────────────┐                                           │
+                             │        (Trap        │                                           │
+                             │ (direction Leave))  │                                           │
+                             └─────────────────────┘                                           │
+                               │                                                               │
+                               │                                                               │
+                               ▼                                                               │
+                             ┌─────────────────────┐                                           │
+                             │         Nop         │                                           │
+                             └─────────────────────┘                                           │
+                               │                                                               │
+                               │                                                               │
+                               ▼                                                               │
+                             ┌─────────────────────┐                                           │
+                             │       <EXIT>        │ ◀─────────────────────────────────────────┘
+                             └─────────────────────┘
 
     ┌───────────────────┐
     │      <RAISE>      │
@@ -818,174 +812,171 @@ let%expect_test "" =
     );
   ();
   [%expect {|
-                                     ┌───────────────────────────┐
-                                     │      Start_function       │
-                                     └───────────────────────────┘
-                                       │
-                                       │
-                                       ▼
-                                     ┌───────────────────────────┐
-                                     │           (Trap           │
-                                     │    (direction Enter))     │
-                                     └───────────────────────────┘
-                                       │
-                                       │
-                                       ▼
-                                     ┌───────────────────────────┐
-                                     │           (Pure           │
-                                     │      (I (Const 1)))       │
-                                     │        o:(Temp 1)         │
-                                     └───────────────────────────┘
-                                       │
-                                       │
-                                       ▼
-                                     ┌───────────────────────────┐
-                                     │           (Pure           │
-                                     │            (I             │
-                                     │           (Cmp            │
-                                     │       (signed true)       │
-                                     │    (comparison Cne))))    │
-                                     │       i:(Var z_48)        │
-                                     │        i:(Temp 1)         │
-                                     │        o:(Temp 0)         │
-                                     └───────────────────────────┘
-                                       │
-                                       │
-                                       ▼
-         ┌────────────────────┐      ┌───────────────────────────┐
-         │                    │      │           (Flow           │
-         │       (Pure        │      │     (Test_and_branch      │
-         │   (I (Const 1)))   │      │           (Bool           │
-         │    o:(Var x_58)    │      │        (then_value        │
-         │                    │  1   │         true))))          │
-         │                    │ ◀─── │        i:(Temp 0)         │
-         └────────────────────┘      └───────────────────────────┘
-           │                           │
-           │                           │ 0
-           ▼                           ▼
-         ┌────────────────────┐      ┌───────────────────────────┐
-         │       (Pure        │      │           (Pure           │
-         │  (I (Const -2)))   │      │      (I (Const 3)))       │
-         │     o:(Temp 5)     │      │        o:(Temp 3)         │
-         └────────────────────┘      └───────────────────────────┘
-           │                           │
-           │                           │
-           ▼                           ▼
-         ┌────────────────────┐      ┌───────────────────────────┐
-         │                    │      │           (Pure           │
-         │                    │      │            (I             │
-         │   (Pure (I Add))   │      │           (Cmp            │
-         │    i:(Var z_48)    │      │       (signed true)       │
-         │     i:(Temp 5)     │      │    (comparison Cne))))    │
-         │    o:(Var y_57)    │      │       i:(Var z_48)        │
-         │                    │      │        i:(Temp 3)         │
-         │                    │      │        o:(Temp 2)         │
-         └────────────────────┘      └───────────────────────────┘
-           │                           │
-           │                           │
-           ▼                           ▼
-         ┌────────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-         │                    │      │           (Flow           │      │                  │
-         │       (Pure        │      │     (Test_and_branch      │      │      (Pure       │
-         │ (I (Const 1024)))  │      │           (Bool           │      │ (I (Const 245))) │
-         │     o:(Temp 6)     │      │        (then_value        │      │   o:(Var x_58)   │
-         │                    │      │         true))))          │  1   │                  │
-      ┌▶ │                    │      │        i:(Temp 2)         │ ───▶ │                  │
-      │  └────────────────────┘      └───────────────────────────┘      └──────────────────┘
-      │    │                           │                                  │
-      │    │                           │ 0                                │
-      │    ▼                           ▼                                  ▼
-      │  ┌────────────────────┐      ┌───────────────────────────┐      ┌──────────────────┐
-      │  │   (Pure (I Add))   │      │           (Pure           │      │      (Pure       │
-      │  │    i:(Var x_58)    │      │          (Symbol          │      │  (I (Const 1)))  │
-      │  │    i:(Var y_57)    │      │ camlTest__Pmakeblock_60)) │      │   o:(Var y_57)   │
-      │  │     o:(Temp 8)     │      │        o:(Temp 4)         │      │                  │
-      │  └────────────────────┘      └───────────────────────────┘      └──────────────────┘
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    ▼                           ▼                                  │
-      │  ┌────────────────────┐      ┌───────────────────────────┐        │
-      │  │                    │      │           (Flow           │        │
-      │  │                    │      │          (Raise           │        │
-      │  │       (Pure        │      │           (kind           │        │
-      │  │  (I (Const -1)))   │      │      Raise_notrace)       │        │
-      │  │     o:(Temp 9)     │      │      (local true)))       │        │
-      │  │                    │      │        i:(Temp 4)         │        │
-      │  │                    │      │     o:(Var output_70)     │        │
-      │  └────────────────────┘      └───────────────────────────┘        │
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    ▼                           ▼                                  │
-      │  ┌────────────────────┐      ┌───────────────────────────┐        │
-      │  │   (Pure (I Add))   │      │                           │        │
-      │  │     i:(Temp 8)     │      │           (Trap           │        │
-      │  │     i:(Temp 9)     │      │    (direction Leave))     │        │
-      │  │     o:(Temp 7)     │      │                           │        │
-      │  └────────────────────┘      └───────────────────────────┘        │
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    ▼                           ▼                                  │
-      │  ┌────────────────────┐      ┌───────────────────────────┐        │
-      │  │                    │      │           (Mem            │        │
-      │  │                    │      │           (Load           │        │
-      │  │    (Mem Alloc)     │      │       (memory_chunk       │        │
-      │  │     i:(Temp 6)     │      │         Word_val)         │        │
-      │  │     i:(Temp 7)     │      │        (mutability        │        │
-      │  │ o:(Var output_70)  │      │         Mutable)          │        │
-      │  │                    │      │    (is_atomic false)))    │        │
-      │  │                    │      │      i:(Var exn_50)       │        │
-      │  │                    │      │        o:(Temp 11)        │        │
-      │  └────────────────────┘      └───────────────────────────┘        │
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    ▼                           ▼                                  │
-      │  ┌────────────────────┐      ┌───────────────────────────┐        │
-      │  │                    │      │           (Pure           │        │
-      │  │       (Trap        │      │          (Symbol          │        │
-      │  │ (direction Leave)) │      │ caml_exn_Assert_failure)) │        │
-      │  │                    │      │        o:(Temp 12)        │        │
-      │  └────────────────────┘      └───────────────────────────┘        │
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    │                           ▼                                  │
-      │    │                         ┌───────────────────────────┐        │
-      │    │                         │           (Pure           │        │
-      │    │                         │            (I             │        │
-      │    │                         │           (Cmp            │        │
-      │    │                         │       (signed true)       │        │
-      │    │                         │    (comparison Ceq))))    │        │
-      │    │                         │        i:(Temp 11)        │        │
-      │    │                         │        i:(Temp 12)        │        │
-      │    │                         │        o:(Temp 10)        │        │
-      │    │                         └───────────────────────────┘        │
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    │                           ▼                                  │
-      │    │                         ┌───────────────────────────┐        │                       ┌───────────────────┐
-      │    │                         │           (Flow           │        │                       │       (Flow       │
-      │    │                         │     (Test_and_branch      │        │                       │      (Raise       │
-      │    │                         │           (Bool           │        │                       │       (kind       │
-      │    │                         │        (then_value        │        │                       │  Raise_notrace)   │
-      │    │                         │         true))))          │        │                       │  (local false)))  │
-      │    │                         │        i:(Temp 10)        │        │                  1    │  i:(Var exn_50)   │
-      │    │                         │                           │ ───────┼─────────────────────▶ │ o:(Var output_70) │
-      │    │                         └───────────────────────────┘        │                       └───────────────────┘
-      │    │                           │                                  │                         │
-      │    │                           │ 0                                │                         │
-      │    │                           ▼                                  │                         ▼
-      │    │                         ┌───────────────────────────┐        │                       ┌───────────────────┐
-      │    │                         │           (Pure           │        │                       │                   │
-      │    │                         │      (I (Const 1)))       │        │                       │      <RAISE>      │
-      │    │                         │     o:(Var output_70)     │        │                       │                   │
-      │    │                         └───────────────────────────┘        │                       └───────────────────┘
-      │    │                           │                                  │
-      │    │                           │                                  │
-      │    │                           ▼                                  │
-      │    │                         ┌───────────────────────────┐        │
-      │    └───────────────────────▶ │          <EXIT>           │        │
-      │                              └───────────────────────────┘        │
-      │                                                                   │
-      └───────────────────────────────────────────────────────────────────┘
+                             ┌─────────────────────┐
+                             │   Start_function    │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Trap        │
+                             │ (direction Enter))  │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │   (I (Const 1)))    │
+                             │     o:(Temp 1)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+                             ┌─────────────────────┐
+                             │        (Pure        │
+                             │         (I          │
+                             │        (Cmp         │
+                             │    (signed true)    │
+                             │ (comparison Cne)))) │
+                             │    i:(Var z_48)     │
+                             │     i:(Temp 1)      │
+                             │     o:(Temp 0)      │
+                             └─────────────────────┘
+                               │
+                               │
+                               ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Flow        │
+    │      (Pure      │      │  (Test_and_branch   │
+    │ (I (Const 1)))  │      │        (Bool        │
+    │  o:(Var x_58)   │      │     (then_value     │
+    │                 │  1   │      true))))       │
+    │                 │ ◀─── │     i:(Temp 0)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │ 0
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │      (Pure      │      │        (Pure        │
+    │ (I (Const -2))) │      │   (I (Const 3)))    │
+    │   o:(Temp 5)    │      │     o:(Temp 3)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      ▼                        ▼
+    ┌─────────────────┐      ┌─────────────────────┐
+    │                 │      │        (Pure        │
+    │                 │      │         (I          │
+    │ (Pure (I Add))  │      │        (Cmp         │
+    │  i:(Var z_48)   │      │    (signed true)    │
+    │   i:(Temp 5)    │      │ (comparison Cne)))) │
+    │  o:(Var y_57)   │      │    i:(Var z_48)     │
+    │                 │      │     i:(Temp 3)      │
+    │                 │      │     o:(Temp 2)      │
+    └─────────────────┘      └─────────────────────┘
+      │                        │
+      │                        │
+      │                        ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │        (Flow        │      │                           │
+      │                      │  (Test_and_branch   │      │           (Pure           │
+      │                      │        (Bool        │      │          (Symbol          │
+      │                      │     (then_value     │      │ camlTest__Pmakeblock_60)) │
+      │                      │      true))))       │  0   │        o:(Temp 4)         │
+      │                      │     i:(Temp 2)      │ ───▶ │                           │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │ 1                          │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Flow           │
+      │                      │                     │      │          (Raise           │
+      │                      │        (Pure        │      │           (kind           │
+      │                      │  (I (Const 245)))   │      │      Raise_notrace)       │
+      │                      │    o:(Var x_58)     │      │      (local true)))       │
+      │                      │                     │      │        i:(Temp 4)         │
+      │                      │                     │      │     o:(Var output_70)     │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │                     │      │           (Mem            │
+      │                      │                     │      │           (Load           │
+      │                      │                     │      │       (memory_chunk       │
+      │                      │        (Pure        │      │         Word_val)         │
+      │                      │   (I (Const 1)))    │      │        (mutability        │
+      │                      │    o:(Var y_57)     │      │         Mutable)          │
+      │                      │                     │      │    (is_atomic false)))    │
+      │                      │                     │      │      i:(Var exn_50)       │
+      │                      │                     │      │        o:(Temp 11)        │
+      │                      └─────────────────────┘      └───────────────────────────┘
+      │                        │                            │
+      │                        │                            │
+      │                        ▼                            ▼
+      │                      ┌─────────────────────┐      ┌───────────────────────────┐
+      │                      │        (Pure        │      │           (Pure           │
+      │                      │  (I (Const 1024)))  │      │          (Symbol          │
+      │                      │     o:(Temp 6)      │      │ caml_exn_Assert_failure)) │
+      └────────────────────▶ │                     │      │        o:(Temp 12)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐
+                             │                     │      │           (Pure           │
+                             │                     │      │            (I             │
+                             │   (Pure (I Add))    │      │           (Cmp            │
+                             │    i:(Var x_58)     │      │       (signed true)       │
+                             │    i:(Var y_57)     │      │    (comparison Ceq))))    │
+                             │     o:(Temp 8)      │      │        i:(Temp 11)        │
+                             │                     │      │        i:(Temp 12)        │
+                             │                     │      │        o:(Temp 10)        │
+                             └─────────────────────┘      └───────────────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐      ┌───────────────────┐
+                             │                     │      │           (Flow           │      │       (Flow       │
+                             │                     │      │     (Test_and_branch      │      │      (Raise       │
+                             │        (Pure        │      │           (Bool           │      │       (kind       │
+                             │   (I (Const -1)))   │      │        (then_value        │      │  Raise_notrace)   │
+                             │     o:(Temp 9)      │      │         true))))          │      │  (local false)))  │
+                             │                     │      │        i:(Temp 10)        │  1   │  i:(Var exn_50)   │
+                             │                     │      │                           │ ───▶ │ o:(Var output_70) │
+                             └─────────────────────┘      └───────────────────────────┘      └───────────────────┘
+                               │                            │                                  │
+                               │                            │ 0                                │
+                               ▼                            ▼                                  ▼
+                             ┌─────────────────────┐      ┌───────────────────────────┐      ┌───────────────────┐
+                             │   (Pure (I Add))    │      │           (Pure           │      │                   │
+                             │     i:(Temp 8)      │      │      (I (Const 1)))       │      │      <RAISE>      │
+                             │     i:(Temp 9)      │      │     o:(Var output_70)     │      │                   │
+                             │     o:(Temp 7)      │      │                           │      │                   │
+                             └─────────────────────┘      └───────────────────────────┘      └───────────────────┘
+                               │                            │
+                               │                            │
+                               ▼                            │
+                             ┌─────────────────────┐        │
+                             │     (Mem Alloc)     │        │
+                             │     i:(Temp 6)      │        │
+                             │     i:(Temp 7)      │        │
+                             │  o:(Var output_70)  │        │
+                             └─────────────────────┘        │
+                               │                            │
+                               │                            │
+                               ▼                            │
+                             ┌─────────────────────┐        │
+                             │        (Trap        │        │
+                             │ (direction Leave))  │        │
+                             └─────────────────────┘        │
+                               │                            │
+                               │                            │
+                               ▼                            │
+                             ┌─────────────────────┐        │
+                             │       <EXIT>        │ ◀──────┘
+                             └─────────────────────┘
 
     ┌───────────────────┐
     │      <RAISE>      │

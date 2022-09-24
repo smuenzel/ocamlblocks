@@ -291,10 +291,9 @@ let rec transl
   | T (Ctrywith (body, _exn, handler, _dbg) , _) ->
     let new_trap_stack = Trap_stack.add_fresh_trap trap_stack in
     let trap_adjust_id = Igraph_builder.next_id b in
-    let pre_handler_id = Igraph_builder.next_id b in
     let handler_id = Igraph_builder.next_id b in
     let trap_handlers =
-      Map.add_exn trap_handlers ~key:new_trap_stack ~data:pre_handler_id
+      Map.add_exn trap_handlers ~key:new_trap_stack ~data:handler_id
     in
     Igraph_builder.insert b ~next:[| fallthrough_id |]
       trap_adjust_id
@@ -313,15 +312,6 @@ let rec transl
       ~trap_stack:new_trap_stack
       ~result
       ~trap_handlers
-    ;
-    (* Insert Nop so that the Poptrap happens in the handler *)
-    Igraph_builder.insert b ~next:[| handler_id |]
-      pre_handler_id
-      { inst = Nop
-      ; inputs = [||]
-      ; output = None
-      ; trap_stack = new_trap_stack
-      }
     ;
     transl b handler ~this_id:handler_id ~fallthrough_id exits ~trap_stack ~result ~trap_handlers;
     ()

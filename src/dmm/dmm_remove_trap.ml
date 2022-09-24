@@ -30,6 +30,8 @@ let remove_trap (b : Dmm.Inst_args.t Igraph_builder.t) =
             }
           ;
           Some next_id
+        | `Pop _ when match from_node.inst with | Flow (Raise _) -> true | _ -> false ->
+          None
         | `Pop pop_count ->
           let next_ids =
             to_
@@ -60,6 +62,14 @@ let remove_trap (b : Dmm.Inst_args.t Igraph_builder.t) =
         ; inputs
         ; output
         }
+      )
+
+let remove_nop_pre (b : Dmm.Inst_args.t Igraph_builder.t) =
+  Igraph_builder.filter_nodes b
+    ~f:(fun x ->
+        match x.inst with
+        | Nop -> false
+        | _ -> true
       )
 
 let remove_nop (b : Dmm.Inst_notrap.t Igraph_builder.t) =
